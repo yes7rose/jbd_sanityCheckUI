@@ -13,6 +13,10 @@ import maya.cmds as cmds
 SEP = " |  | " ## Used in the listWidgets to make it easier to read the long names
 
 
+## TODO add a feature to allow changing the yaml for the CONST
+## TODO add a feature to remove the 1 at the end of the badly numbered items
+## TEST!
+
 class SanityUI(QMainWindow):
     def __init__(self, parent = None):
         QMainWindow.__init__(self, parent)
@@ -257,6 +261,55 @@ class ReportWindow(QWidget):
         self.groupBoxLayout.addWidget(self.reportTree)
         self.mainLayout.addWidget(self.groupBox)
 
+    def _initRCMenu(self):
+        self.rightClickMenu = QMenu()
+        self.rightClickMenu.setObjectName('Actions')
+        self.rightClickMenu.setWindowTitle('Actions')
+
+        ################################################################################################################
+        ################################################################################################################
+        ## ADD CUSTOM ACTIONS FOR CUSTOM SANITY CHECKS HERE
+        ## Define the custom actions now that the config will query each check to show or hide based on the
+        ## type of check done
+        self.geoSuffixAction = QAction('Add geo suffix', self)
+        self.geoSuffixAction.setObjectName('AddGeoSuffix')
+        self.geoSuffixAction.setIcon(QIcon("{}/iconmonstr-plus-1-240.png".format(CONST.ICONPATH)))
+        self.geoSuffixAction.triggered.connect(partial(self.addSuffix, suffix = CONST.GEOMETRY_SUFFIX))
+
+        self.grpSuffixAction = QAction('Add grp suffix', self)
+        self.grpSuffixAction.setObjectName('AddGrpSuffix')
+        self.grpSuffixAction.setIcon(QIcon("{}/iconmonstr-plus-1-240.png".format(CONST.ICONPATH)))
+        self.grpSuffixAction.triggered.connect(partial(self.addSuffix, suffix = CONST.GROUP_SUFFIX))
+
+        self.renameAction = QAction('Rename', self)
+        self.renameAction.setObjectName('rename')
+        self.renameAction.setIcon(QIcon("{}/iconmonstr-tumblr-4-240.png".format(CONST.ICONPATH)))
+        self.renameAction.triggered.connect(partial(self.renamePopUpUI))
+
+        self.removeShapesAction = QAction('Remove Shapes from List', self)
+        self.removeShapesAction.setObjectName('removeShapes')
+        self.removeShapesAction.setIcon(QIcon("{}/iconmonstr-tumblr-4-240.png".format(CONST.ICONPATH)))
+        self.removeShapesAction.triggered.connect(partial(self.removeFromList, '{}Shape'.format(CONST.GEOMETRY_SUFFIX)))
+
+        self.actions = [self.geoSuffixAction, self.grpSuffixAction, self.renameAction, self.removeShapesAction]
+        ################################################################################################################
+        ################################################################################################################
+
+        ## DEFAULT Right click menu actions
+        self.deleteAction = QAction('Delete', self)
+        self.deleteAction.setIcon(QIcon("{}/iconmonstr-trash-can-5-240.png" .format(CONST.ICONPATH)))
+        self.deleteAction.triggered.connect(partial(self.processItems, case = 'delete'))
+
+        ## Add the custom menu items to this report view
+        actionsToDisplay = self.config["rcMenu"][self.label]
+        for eachAction in self.actions:
+            if eachAction.objectName() in actionsToDisplay:
+                self.rightClickMenu.addAction(eachAction)
+
+        ## Add the defaults now
+        self.rightClickMenu.addSeparator()
+        self.rightClickMenu.addAction(self.deleteAction)
+
     def addData(self, data = []):
         """
         Process the data into the report window
@@ -355,54 +408,6 @@ class ReportWindow(QWidget):
         self.reportTree.clear()
         self.addData(treeWidgets)
 
-    def _initRCMenu(self):
-        self.rightClickMenu = QMenu()
-        self.rightClickMenu.setObjectName('Actions')
-        self.rightClickMenu.setWindowTitle('Actions')
-
-        ################################################################################################################
-        ################################################################################################################
-        ## ADD CUSTOM ACTIONS FOR CUSTOM SANITY CHECKS HERE
-        ## Define the custom actions now that the config will query each check to show or hide based on the type of check done
-        self.geoSuffixAction = QAction('Add geo suffix', self)
-        self.geoSuffixAction.setObjectName('AddGeoSuffix')
-        self.geoSuffixAction.setIcon(QIcon("{}/iconmonstr-plus-1-240.png".format(CONST.ICONPATH)))
-        self.geoSuffixAction.triggered.connect(partial(self.addSuffix, suffix = CONST.GEOMETRY_SUFFIX))
-
-        self.grpSuffixAction = QAction('Add grp suffix', self)
-        self.grpSuffixAction.setObjectName('AddGrpSuffix')
-        self.grpSuffixAction.setIcon(QIcon("{}/iconmonstr-plus-1-240.png".format(CONST.ICONPATH)))
-        self.grpSuffixAction.triggered.connect(partial(self.addSuffix, suffix = CONST.GROUP_SUFFIX))
-
-        self.renameAction = QAction('Rename', self)
-        self.renameAction.setObjectName('rename')
-        self.renameAction.setIcon(QIcon("{}/iconmonstr-tumblr-4-240.png".format(CONST.ICONPATH)))
-        self.renameAction.triggered.connect(partial(self.renamePopUpUI))
-
-        self.removeShapesAction = QAction('Remove Shapes from List', self)
-        self.removeShapesAction.setObjectName('removeShapes')
-        self.removeShapesAction.setIcon(QIcon("{}/iconmonstr-tumblr-4-240.png".format(CONST.ICONPATH)))
-        self.removeShapesAction.triggered.connect(partial(self.removeFromList, '{}Shape'.format(CONST.GEOMETRY_SUFFIX)))
-
-        self.actions = [self.geoSuffixAction, self.grpSuffixAction, self.renameAction, self.removeShapesAction]
-        ################################################################################################################
-        ################################################################################################################
-
-        ## DEFAULT Right click menu actions
-        self.deleteAction = QAction('Delete', self)
-        self.deleteAction.setIcon(QIcon("{}/iconmonstr-trash-can-5-240.png" .format(CONST.ICONPATH)))
-        self.deleteAction.triggered.connect(partial(self.processItems, case = 'delete'))
-
-        ## Add the custom menu items to this report view
-        actionsToDisplay = self.config["rcMenu"][self.label]
-        for eachAction in self.actions:
-            if eachAction.objectName() in actionsToDisplay:
-                self.rightClickMenu.addAction(eachAction)
-
-        ## Add the defaults now
-        self.rightClickMenu.addSeparator()
-        self.rightClickMenu.addAction(self.deleteAction)
-
     def showRightClickMenu(self, position):
         self.rightClickMenu.exec_(self.reportTree.viewport().mapToGlobal(position))
         self.rightClickMenu.show()
@@ -413,7 +418,7 @@ def loadConfig():
     myPath = os.path.realpath(__file__)
     myPath = myPath.split(os.path.sep)
     myPath = "\\".join(myPath[:-1])
-    filePath = "%s\\lib\\CONFIG.yaml" % myPath
+    filePath = "%s\\ui\\CONFIG.yaml" % myPath
     return _readYAML(filePath)
 
 def _readYAML(filePath):
