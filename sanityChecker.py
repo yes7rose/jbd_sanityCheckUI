@@ -136,6 +136,7 @@ class SanityUI(QMainWindow):
 
     def _initChecksPassed(self):
         self.dockStatus = QDockWidget(self)
+        self.dockStatus.hide()
         self.dockStatus.setWindowTitle('Check Results')
         self.dockStatus.setFeatures(QDockWidget.NoDockWidgetFeatures)
 
@@ -191,11 +192,14 @@ class SanityUI(QMainWindow):
 
         self.failedList.clear()
         self.passedList.clear()
+        self.dockStatus.show()
 
+        self.failed = False
         for eachRB in self.checkBoxes:
             if eachRB.isChecked():
                 if eachRB.objectName() in data.keys():  ## The sanity name is in the dict from the checks
                     if data[eachRB.objectName()]:       ## We have valid failed data to process
+                        self.failed = True
                         self.failedList.setEnabled(True)
                         self.reportQL = ReportWindow(self, eachRB.objectName())
                         self.reportQL.addData(data[eachRB.objectName()])
@@ -204,6 +208,21 @@ class SanityUI(QMainWindow):
                         self.reports.extend([self.reportQL])
                     else:
                         self.passedList.addItem(eachRB.objectName())
+
+        if not self.failed:
+            self.allPassedWidget = QWidget(self)
+            self.allPassedLayout = QVBoxLayout(self.allPassedWidget)
+            self.passed = QPixmap("{}/iconmonstr-checkbox-10-240.png".format(CONST.ICONPATH))
+            self.passed.scaled(800, 600, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+
+            self.passedLabel = QSplashScreen(self.passed)
+
+            self.allPassedLayout.addWidget(self.passedLabel)
+
+            self.tabWidget.addWidget(self.allPassedWidget)
+
+            self.reports.extend([self.allPassedWidget])
+
 
 
 class ReportWindow(QWidget):
@@ -246,8 +265,6 @@ class ReportWindow(QWidget):
         :return:
         """
         self.reportTree.clear()
-        #for eachItem in dataList:
-        #    self.reportTree.addItem(eachItem)
         stash = data
         for eachD in data:
             ## Add the item with a cleaner more readable spacer than maya's default |
@@ -320,9 +337,23 @@ class ReportWindow(QWidget):
                         cmds.rename(curItem, "{0}{1:02d}".format(renameTo, x))
             else:
                 name = self.reportTree.currentItem().text().replace(SEP, "|")
-                cmds.rename(name, renameTo)
+                if "#" in renameTo:
+                    cmds.rename(name, renameTo.replace("#", "00"))
+                else:
+                    cmds.rename(name, renameTo)
         else:
             logger.info('No name set.')
+
+    def removeFromList(self, searchString = ''):
+        ##TODO this isn't working as intended the resulting addData is all over the place :(
+        count = self.reportTree.count()
+        treeWidgets = []
+        for x in range(count):
+            if searchString not in self.reportTree.item(x).text() and self.reportTree.item(x).text() != "-----":
+                if self.reportTree.item(x).text().replace(SEP, "|") not in treeWidgets:
+                    treeWidgets.extend([self.reportTree.item(x).text().replace(SEP, "|")])
+        self.reportTree.clear()
+        self.addData(treeWidgets)
 
     def _initRCMenu(self):
         self.rightClickMenu = QMenu()
@@ -335,18 +366,25 @@ class ReportWindow(QWidget):
         ## Define the custom actions now that the config will query each check to show or hide based on the type of check done
         self.geoSuffixAction = QAction('Add geo suffix', self)
         self.geoSuffixAction.setObjectName('AddGeoSuffix')
-        self.geoSuffixAction.setIcon(QIcon("{}/iconmonstr-plus-1-240.png" .format(CONST.ICONPATH)))
+        self.geoSuffixAction.setIcon(QIcon("{}/iconmonstr-plus-1-240.png".format(CONST.ICONPATH)))
         self.geoSuffixAction.triggered.connect(partial(self.addSuffix, suffix = CONST.GEOMETRY_SUFFIX))
 
         self.grpSuffixAction = QAction('Add grp suffix', self)
         self.grpSuffixAction.setObjectName('AddGrpSuffix')
+        self.grpSuffixAction.setIcon(QIcon("{}/iconmonstr-plus-1-240.png".format(CONST.ICONPATH)))
         self.grpSuffixAction.triggered.connect(partial(self.addSuffix, suffix = CONST.GROUP_SUFFIX))
 
         self.renameAction = QAction('Rename', self)
         self.renameAction.setObjectName('rename')
+        self.renameAction.setIcon(QIcon("{}/iconmonstr-tumblr-4-240.png".format(CONST.ICONPATH)))
         self.renameAction.triggered.connect(partial(self.renamePopUpUI))
 
-        self.actions = [self.geoSuffixAction, self.grpSuffixAction, self.renameAction]
+        self.removeShapesAction = QAction('Remove Shapes from List', self)
+        self.removeShapesAction.setObjectName('removeShapes')
+        self.removeShapesAction.setIcon(QIcon("{}/iconmonstr-tumblr-4-240.png".format(CONST.ICONPATH)))
+        self.removeShapesAction.triggered.connect(partial(self.removeFromList, '{}Shape'.format(CONST.GEOMETRY_SUFFIX)))
+
+        self.actions = [self.geoSuffixAction, self.grpSuffixAction, self.renameAction, self.removeShapesAction]
         ################################################################################################################
         ################################################################################################################
 
@@ -357,9 +395,7 @@ class ReportWindow(QWidget):
 
         ## Add the custom menu items to this report view
         actionsToDisplay = self.config["rcMenu"][self.label]
-        print 'actionsToDisplay: %s' % actionsToDisplay
         for eachAction in self.actions:
-            print 'eachActionobjectname: %s' % eachAction.objectName()
             if eachAction.objectName() in actionsToDisplay:
                 self.rightClickMenu.addAction(eachAction)
 
@@ -372,6 +408,7 @@ class ReportWindow(QWidget):
         self.rightClickMenu.show()
 
 
+################### FUNCS
 def loadConfig():
     myPath = os.path.realpath(__file__)
     myPath = myPath.split(os.path.sep)
