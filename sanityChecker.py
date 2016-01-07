@@ -10,25 +10,35 @@ logger = logging.getLogger(__name__)
 import lib.sanity as sanity
 import lib.CONST as CONST
 import maya.cmds as cmds
-reload(sanity)
+SEP = " |  | " ## Used in the listWidgets to make it easier to read the long names
+
 
 class SanityUI(QMainWindow):
     def __init__(self, parent = None):
         QMainWindow.__init__(self, parent)
         self.setWindowTitle('Sanity Check')
         self.setObjectName('Sanity Check')
-        self.mainLayout = QVBoxLayout(self)
-        self.state = 'rig'
         self.checkBoxes = []
         self.reports = []
+        ## Load the config file from disk
+        self.config = loadConfig()
+
+        ## Set the intial checking list
+        self.state = 'rig'
+        ## Now INIT the ui
         self._initCheckDock()
         self._initCheckBoxes()
         self._initChecksPassed()
+
+        ## Create the center widget stacked info report stuff
         self.tabWidget = QStackedWidget(self)
         self.setCentralWidget(self.tabWidget)
-        self.addToolBar(self._initToolBar())
-        self.mainLayout.addStretch(1)
 
+        ## Add the toolbar to the top
+        self.addToolBar(self._initToolBar())
+
+        ## Final layout stuff
+        self.setDockNestingEnabled(True)
         self.resize(1200, 600)
 
     def _initToolBar(self):
@@ -78,7 +88,7 @@ class SanityUI(QMainWindow):
         self.dock.setWindowTitle('{} Sanity Checks:'.format(self.state))
         self.dockWidget = QWidget()
         self.dock.setWidget(self.dockWidget)
-        self.dockLayout = QVBoxLayout(self.dockWidget)
+        self.dockLayout = QGridLayout(self.dockWidget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.dock)
         self.dock.setMinimumWidth(150)
 
@@ -90,12 +100,43 @@ class SanityUI(QMainWindow):
             self.disableAll.clicked.connect(partial(self.toggleCheckBoxes, False))
             self.buttonLayout.addWidget(self.endableAll)
             self.buttonLayout.addWidget(self.disableAll)
-            self.dockLayout.addLayout(self.buttonLayout)
+            self.dockLayout.addLayout(self.buttonLayout, 0, 0)
 
-        self.dockLayout.addStretch(1)
+    def _initCheckBoxes(self, stateCB = None):
+        ## Clean the previous checkboxes from widget
+        if self.checkBoxes:
+            for eachCBox in self.checkBoxes:
+                eachCBox.close()
+                eachCBox = None
+        self.checkBoxes = []
+
+        ## CHeck to see if we're changing the list to a new one or not
+        if stateCB:
+            self.state = stateCB
+            self.dock.setWindowTitle('%s Sanity Checks:' % self.state)
+
+        ## Setup the list now
+        self.checkLayout = QVBoxLayout(self)
+        if self.state in self.config['checks'].keys():
+            self.checkList = self.config['checks'][self.state]
+            for eachCheck in self.checkList:
+                self.radioButton = QRadioButton(eachCheck, self)
+                self.radioButton.setObjectName(eachCheck)
+                self.radioButton.setAutoExclusive(False)
+                self.radioButton.setChecked(True)
+                self.checkBoxes.extend([self.radioButton])
+                self.checkLayout.addWidget(self.radioButton)
+
+            self.dockLayout.addLayout(self.checkLayout, 1, 0)
+            self.checkLayout.addStretch(1)
+        else:
+            raise Exception ('Missing key in yaml file for %s' % self.stat)
+
+        self.dockLayout.rowStretch(3)
 
     def _initChecksPassed(self):
         self.dockStatus = QDockWidget(self)
+        self.dockStatus.setWindowTitle('Check Results')
         self.dockStatus.setFeatures(QDockWidget.NoDockWidgetFeatures)
 
         self.dockStatusWidget = QWidget()
@@ -129,56 +170,19 @@ class SanityUI(QMainWindow):
 
         self.addDockWidget(Qt.LeftDockWidgetArea, self.dockStatus)
         self.dockStatus.setMaximumWidth(300)
+        self.tabifyDockWidget(self.dock, self.dockStatus)
+        self.splitDockWidget(self.dock, self.dockStatus, Qt.Horizontal)
 
     def toggleCheckBoxes(self, val = False):
         if self.checkBoxes:
             for eachCbx in self.checkBoxes:
                 eachCbx.setChecked(val)
 
-    def _initCheckBoxes(self, stateCB = None):
-        myPath = os.path.realpath(__file__)
-        myPath = myPath.split(os.path.sep)
-        myPath = "\\".join(myPath[:-1])
-        filePath = "%s\\lib\\CONFIG.yaml" % myPath
-        self.config = self._readYAML(filePath)
-        ## Clean the previous checkboxes from widget
-        if self.checkBoxes:
-            for eachCBox in self.checkBoxes:
-                eachCBox.close()
-                eachCBox = None
-        self.checkBoxes = []
-
-        ## CHeck to see if we're changing the list to a new one or not
-        if stateCB:
-            self.state = stateCB
-            self.dock.setWindowTitle('%s Sanity Checks:' % self.state)
-
-        ## Setup the list now
-        self.checkLayout = QVBoxLayout(self)
-        if self.state in self.config['checks'].keys():
-            self.checkList = self.config['checks'][self.state]
-            for eachCheck in self.checkList:
-                self.radioButton = QRadioButton(eachCheck, self)
-                self.radioButton.setObjectName(eachCheck)
-                self.radioButton.setAutoExclusive(False)
-                self.radioButton.setChecked(True)
-                self.checkBoxes.extend([self.radioButton])
-                self.checkLayout.addWidget(self.radioButton)
-
-            self.dockLayout.addLayout(self.checkLayout)
-        else:
-            raise Exception ('Missing key in yaml file for %s' % self.stat)
-
     def _switchTabs(self):
         currentItem = self.failedList.currentItem().text()
         for eachWidget in self.reports:
             if eachWidget.objectName() == currentItem:
                 self.tabWidget.setCurrentWidget(eachWidget)
-
-    def _readYAML(self, filePath):
-        f = open(filePath, "r")
-        data = yaml.load(f)
-        return data
 
     def _performChecks(self):
         data = sanity.sanityCheck()
@@ -202,8 +206,6 @@ class SanityUI(QMainWindow):
                         self.passedList.addItem(eachRB.objectName())
 
 
-
-SEP = " |  | " ## Used in the listWidgets to make it easier to read the long names
 class ReportWindow(QWidget):
     def __init__(self, parent = None, label = {}):
         QWidget.__init__(self, parent)
@@ -211,9 +213,8 @@ class ReportWindow(QWidget):
         self.setWindowTitle(self.label)
         self.setObjectName(self.label)
         self.mainLayout = QVBoxLayout(self)
-
+        self.config = loadConfig()
         self.data = {}
-
         self.__initMainLayout()
 
     def __initMainLayout(self):
@@ -288,32 +289,97 @@ class ReportWindow(QWidget):
             name = eachItem.text().replace(SEP, "|")
             cmds.rename(name, "{0}_{1}".format(name.split("|")[-1], suffix))
 
+    def renamePopUpUI(self):
+        self.renameWidget = QWidget(None)
+        self.renameLayout = QHBoxLayout(self.renameWidget)
+        self.renameLabel = QLabel('RenameTo:')
+
+        self.renameInput = QLineEdit()
+        self.renameInput.setToolTip('If you have a mutli selection, you can  use # to set the place where you want the padding.\neg: TestName#_geo will result in TestName00_geo TestName01_geo')
+        self.renameInput.returnPressed.connect(self.renameItems)
+        self.renameInput.returnPressed.connect(partial(self.renameWidget.close))
+
+        self.renameLayout.addWidget(self.renameLabel)
+        self.renameLayout.addWidget(self.renameInput)
+        self.renameWidget.show()
+
+    def renameItems(self,):
+        if not hasattr(self, 'renameWidget'):
+            return
+
+        renameTo = self.renameInput.text()
+        if renameTo:
+            count = len(self.reportTree.selectedItems())
+            if count > 1:
+                items = [item for item in self.reportTree.selectedItems()]
+                for x in range(count):
+                    curItem = items[x].text().replace(SEP, "|")
+                    if "#" in renameTo:
+                        cmds.rename(curItem, "{0}".format(renameTo.replace("#", "{0:02d}".format(x))))
+                    else:
+                        cmds.rename(curItem, "{0}{1:02d}".format(renameTo, x))
+            else:
+                name = self.reportTree.currentItem().text().replace(SEP, "|")
+                cmds.rename(name, renameTo)
+        else:
+            logger.info('No name set.')
+
     def _initRCMenu(self):
         self.rightClickMenu = QMenu()
         self.rightClickMenu.setObjectName('Actions')
         self.rightClickMenu.setWindowTitle('Actions')
 
-        self.selectAction = QAction('Select', self)
-        self.selectAction.setIcon(QIcon("{}/iconmonstr-plus-1-240.png" .format(CONST.ICONPATH)))
-        self.selectAction.triggered.connect(partial(self.processItems, case = 'select'))
-
+        ################################################################################################################
+        ################################################################################################################
+        ## ADD CUSTOM ACTIONS FOR CUSTOM SANITY CHECKS HERE
+        ## Define the custom actions now that the config will query each check to show or hide based on the type of check done
         self.geoSuffixAction = QAction('Add geo suffix', self)
+        self.geoSuffixAction.setObjectName('AddGeoSuffix')
+        self.geoSuffixAction.setIcon(QIcon("{}/iconmonstr-plus-1-240.png" .format(CONST.ICONPATH)))
         self.geoSuffixAction.triggered.connect(partial(self.addSuffix, suffix = CONST.GEOMETRY_SUFFIX))
 
         self.grpSuffixAction = QAction('Add grp suffix', self)
+        self.grpSuffixAction.setObjectName('AddGrpSuffix')
         self.grpSuffixAction.triggered.connect(partial(self.addSuffix, suffix = CONST.GROUP_SUFFIX))
 
+        self.renameAction = QAction('Rename', self)
+        self.renameAction.setObjectName('rename')
+        self.renameAction.triggered.connect(partial(self.renamePopUpUI))
+
+        self.actions = [self.geoSuffixAction, self.grpSuffixAction, self.renameAction]
+        ################################################################################################################
+        ################################################################################################################
+
+        ## DEFAULT Right click menu actions
         self.deleteAction = QAction('Delete', self)
         self.deleteAction.setIcon(QIcon("{}/iconmonstr-trash-can-5-240.png" .format(CONST.ICONPATH)))
         self.deleteAction.triggered.connect(partial(self.processItems, case = 'delete'))
 
-        self.rightClickMenu.addAction(self.selectAction)
-        self.rightClickMenu.addSeparator()
-        self.rightClickMenu.addAction(self.geoSuffixAction)
-        self.rightClickMenu.addAction(self.grpSuffixAction)
+        ## Add the custom menu items to this report view
+        actionsToDisplay = self.config["rcMenu"][self.label]
+        print 'actionsToDisplay: %s' % actionsToDisplay
+        for eachAction in self.actions:
+            print 'eachActionobjectname: %s' % eachAction.objectName()
+            if eachAction.objectName() in actionsToDisplay:
+                self.rightClickMenu.addAction(eachAction)
+
+        ## Add the defaults now
         self.rightClickMenu.addSeparator()
         self.rightClickMenu.addAction(self.deleteAction)
 
     def showRightClickMenu(self, position):
         self.rightClickMenu.exec_(self.reportTree.viewport().mapToGlobal(position))
         self.rightClickMenu.show()
+
+
+def loadConfig():
+    myPath = os.path.realpath(__file__)
+    myPath = myPath.split(os.path.sep)
+    myPath = "\\".join(myPath[:-1])
+    filePath = "%s\\lib\\CONFIG.yaml" % myPath
+    return _readYAML(filePath)
+
+def _readYAML(filePath):
+    f = open(filePath, "r")
+    data = yaml.load(f)
+    return data
