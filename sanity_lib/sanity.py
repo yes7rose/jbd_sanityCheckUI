@@ -64,7 +64,7 @@ def collectSanityData():
 
     data["transformGeometry"] = cmds.ls(type = 'transformGeometry', l = True)
 
-    data["endingWith##"] = [node for node in cmds.ls() if re.search(r'\d+$', node) and cmds.nodeType(node) not in IGNORETYPES]
+    data["endingWith##"] = [node for node in cmds.ls(l=True) if re.search(r'\d+$', node) and cmds.nodeType(node) not in IGNORETYPES]
 
     data["unknown"] = cmds.ls(type = 'unknown', l = True)
 
@@ -102,7 +102,7 @@ def checkGrpSuffix(data):
                             if eachXF not in errors:
                                 errors.extend([eachXF])
             else:
-                lookforshape = [shp for shp in getChildren if cmds.nodeType(shp) == 'mesh']
+                lookforshape = [shp for shp in getChildren if cmds.nodeType(shp) == 'mesh' or cmds.nodeType(shp) == 'nurbsCurve']
                 if not lookforshape:
                     if not eachXF.endswith(CONST.GROUP_SUFFIX):
                         if not eachXF.endswith(CONST.SRT_SUFFIX):
@@ -168,6 +168,21 @@ def checkUtilityNames():
                         errors.extend([eachNode])
     return errors
 
+def checkNurbsCurves(data):
+    """
+    Check for bad names on nurbs Curvers
+    :param data: the sanity data collected from scene. Dict from collectSanityData
+    :return:
+    """
+    errors = []
+    for eachCrv in data['nurbsCurve']:
+        p = cmds.listRelatives(eachCrv, p = True, f = True)[0]
+        if not p.endswith(CONST.RIG_CTRL_SUFFIX):
+            if not p.endswith(CONST.NURBSCRV_SUFFIX):
+                if not p in errors:
+                    errors.extend([p])
+    return errors
+
 def sanityCheck():
     """
     Used to process any of the sanity data:
@@ -216,6 +231,9 @@ def sanityCheck():
 
     ## unknown
     sanitydata['unknown'] = data["unknown"]
+
+    ## Base nurbs curves not ending in _crv or _ctrl
+    sanitydata['nurbsCurve'] = checkNurbsCurves(data)
 
     return sanitydata
 

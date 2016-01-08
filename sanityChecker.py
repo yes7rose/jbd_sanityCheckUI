@@ -11,7 +11,7 @@ import sanity_lib.sanity as sanity
 import sanity_lib.CONST as CONST
 import maya.cmds as cmds
 SEP = " |  | " ## Used in the listWidgets to make it easier to read the long names
-
+reload(sanity)
 
 ## TODO add a feature to allow changing the yaml for the CONST
 ## TODO add a feature to remove the 1 at the end of the badly numbered items
@@ -249,6 +249,7 @@ class SanityUI(QMainWindow):
 class ReportWindow(QWidget):
     def __init__(self, parent = None, label = {}):
         QWidget.__init__(self, parent)
+        self.parent = parent
         self.label = label
         self.setWindowTitle(self.label)
         self.setObjectName(self.label)
@@ -257,6 +258,7 @@ class ReportWindow(QWidget):
         self.data = {}
         self.__initMainLayout()
 
+        self.setFocus()
     def __initMainLayout(self):
         """
         Setup the mainLayout for the reporter window
@@ -288,15 +290,20 @@ class ReportWindow(QWidget):
         ## ADD CUSTOM ACTIONS FOR CUSTOM SANITY CHECKS HERE
         ## Define the custom actions now that the config will query each check to show or hide based on the
         ## type of check done
-        self.geoSuffixAction = QAction('Add geo suffix', self)
+        self.geoSuffixAction = QAction('Add \"_{}\" suffix'.format(CONST.GEOMETRY_SUFFIX), self)
         self.geoSuffixAction.setObjectName('AddGeoSuffix')
         self.geoSuffixAction.setIcon(QIcon("{}/iconmonstr-plus-1-240.png".format(CONST.ICONPATH)))
         self.geoSuffixAction.triggered.connect(partial(self.addSuffix, suffix = CONST.GEOMETRY_SUFFIX))
 
-        self.grpSuffixAction = QAction('Add grp suffix', self)
+        self.grpSuffixAction = QAction('Add \"_{}\" suffix'.format(CONST.GROUP_SUFFIX), self)
         self.grpSuffixAction.setObjectName('AddGrpSuffix')
         self.grpSuffixAction.setIcon(QIcon("{}/iconmonstr-plus-1-240.png".format(CONST.ICONPATH)))
         self.grpSuffixAction.triggered.connect(partial(self.addSuffix, suffix = CONST.GROUP_SUFFIX))
+
+        self.crvSuffixAction = QAction('Add \"_{}\" suffix'.format(CONST.NURBSCRV_SUFFIX), self)
+        self.crvSuffixAction.setObjectName('AddCrvSuffix')
+        self.crvSuffixAction.setIcon(QIcon("{}/iconmonstr-plus-1-240.png".format(CONST.ICONPATH)))
+        self.crvSuffixAction.triggered.connect(partial(self.addSuffix, suffix = CONST.NURBSCRV_SUFFIX))
 
         self.renameAction = QAction('Rename', self)
         self.renameAction.setObjectName('rename')
@@ -308,7 +315,7 @@ class ReportWindow(QWidget):
         self.removeShapesAction.setIcon(QIcon("{}/iconmonstr-tumblr-4-240.png".format(CONST.ICONPATH)))
         self.removeShapesAction.triggered.connect(partial(self.removeFromList, '{}Shape'.format(CONST.GEOMETRY_SUFFIX)))
 
-        self.actions = [self.geoSuffixAction, self.grpSuffixAction, self.renameAction, self.removeShapesAction]
+        self.actions = [self.geoSuffixAction, self.grpSuffixAction, self.crvSuffixAction, self.renameAction, self.removeShapesAction]
         ################################################################################################################
         ################################################################################################################
 
@@ -351,36 +358,48 @@ class ReportWindow(QWidget):
             self.reportTree.addItem("-----")
 
     def processItems(self, sender = None, all = False, case = ''):
+        cmds.undoInfo(openChunk = True)
         cmds.select(clear = True)
         if not all:
-            for eachItem in self.reportTree.selectedItems():
-                if "-----" not in eachItem.text():
-                    if case == 'select':
-                        cmds.select(eachItem.text().replace(SEP, "|"), add = True)
-                    elif case == 'delete':
-                        cmds.delete(eachItem.text().replace(SEP, "|"))
+            for eachItem in self._getSelItems():
+                if case == 'select':
+                    cmds.select(eachItem.text().replace(SEP, "|"), add = True, ne = True)
+                elif case == 'delete':
+                    cmds.delete(eachItem.text().replace(SEP, "|"))
         else:
             count = self.reportTree.count()
-            toSel = []
+            items = []
             for x in range(count):
                 if "-----" not in self.reportTree.item(x).text():
-                    toSel.extend([self.reportTree.item(x).text()].replace(SEP, "|"))
+                    items.extend([self.reportTree.item(x).text()].replace(SEP, "|"))
 
             if case == 'select':
-                cmds.select(toSel, r = True)
+                cmds.select(items, r = True, ne = True)
             elif case == 'delete':
-                cmds.delete(toSel)
+                cmds.delete(items)
+        cmds.undoInfo(closeChunk = True)
 
     def addSuffix(self, suffix = ''):
-        for eachItem in self.reportTree.selectedItems():
+        cmds.undoInfo(openChunk = True)
+        cmds.select(clear = True)
+        for eachItem in self._getSelItems():
             name = eachItem.text().replace(SEP, "|")
             cmds.rename(name, "{0}_{1}".format(name.split("|")[-1], suffix))
+        cmds.undoInfo(closeChunk = True)
+        self.parent._performChecks()
 
     def renamePopUpUI(self):
         self.renameWidget = QWidget(None)
-        self.renameLayout = QHBoxLayout(self.renameWidget)
+        self.renameWidget.setObjectName('RenameWindow')
+        self.renameWidget.setWindowTitle('Object(s) Renamer Window')
+        self.renameWidgetMainLayout = QVBoxLayout(self.renameWidget)
+        self.usage = QLabel(self)
+        msg = 'Usage:\n' \
+              'If you have a mutli selection, you can  use # to set the place where you want the padding.\n' \
+              'eg: TestName#_geo will result in TestName00_geo TestName01_geo'
+        self.usage.setText(msg)
+        self.renameLayout = QHBoxLayout(self)
         self.renameLabel = QLabel('RenameTo:')
-
         self.renameInput = QLineEdit()
         self.renameInput.setToolTip('If you have a mutli selection, you can  use # to set the place where you want the padding.\neg: TestName#_geo will result in TestName00_geo TestName01_geo')
         self.renameInput.returnPressed.connect(self.renameItems)
@@ -388,7 +407,16 @@ class ReportWindow(QWidget):
 
         self.renameLayout.addWidget(self.renameLabel)
         self.renameLayout.addWidget(self.renameInput)
+
+        self.renameWidgetMainLayout.addWidget(self.usage)
+        self.renameWidgetMainLayout.addLayout(self.renameLayout)
         self.renameWidget.show()
+        self.renameWidget.resize(600, 100)
+        self.renameWidget.setFocus()
+
+    def _getSelItems(self):
+        items = [item for item in self.reportTree.selectedItems() if item.text() != '-----']
+        return items
 
     def renameItems(self,):
         if not hasattr(self, 'renameWidget'):
@@ -396,9 +424,10 @@ class ReportWindow(QWidget):
 
         renameTo = self.renameInput.text()
         if renameTo:
-            count = len(self.reportTree.selectedItems())
+            cmds.undoInfo(openChunk = True)
+            count = len(self._getSelItems())
             if count > 1:
-                items = [item for item in self.reportTree.selectedItems()]
+                items = self._getSelItems()
                 for x in range(count):
                     curItem = items[x].text().replace(SEP, "|")
                     if "#" in renameTo:
@@ -411,8 +440,9 @@ class ReportWindow(QWidget):
                     cmds.rename(name, renameTo.replace("#", "00"))
                 else:
                     cmds.rename(name, renameTo)
+            cmds.undoInfo(closeChunk = True)
         else:
-            logger.info('No name set.')
+            logger.info('Please type a name?!')
 
     def removeFromList(self, searchString = ''):
         ##TODO this isn't working as intended the resulting addData is all over the place :(
@@ -455,12 +485,16 @@ class ConfigUI(QWidget):
             self.deptGrpBox = QGroupBox(self)
             self.deptGrpBox.setObjectName('{}GroupBox'.format(checkDept))
             self.deptGrpBox.setTitle(checkDept)
-            self.deptGrpBoxLayout = QHBoxLayout(self.deptGrpBox)
+            self.deptGrpBoxLayout = QGridLayout(self.deptGrpBox)
 
             self.deptGrpBox.setContextMenuPolicy(Qt.CustomContextMenu)
             self.deptGrpBox.customContextMenuRequested.connect(self.showRightClickMenu)
 
-            for eachCheck in self.config["checkList"]:
+            r = 0
+            c = 0
+            for x in range(len(self.config["checkList"])):
+            #for eachCheck in self.config["checkList"]:
+                eachCheck = self.config["checkList"][x]
                 self.addRadioBox = QRadioButton(eachCheck)
                 self.addRadioBox.setObjectName(eachCheck)
                 self.addRadioBox.setAutoExclusive(False)
@@ -468,8 +502,17 @@ class ConfigUI(QWidget):
                     if eachItem == eachCheck:
                         self.addRadioBox.setChecked(True)
 
-                self.deptGrpBoxLayout.addWidget(self.addRadioBox)
+                self.deptGrpBoxLayout.addWidget(self.addRadioBox, r, c)
                 self.configData[checkDept][eachCheck] = self.addRadioBox
+
+                if c < 5:
+                    c = c + 1
+                    r = r
+                else:
+                    c = 0
+                    r = r + 1
+
+            ## Now add the groupbox to the layout
             self.checksLayout.addWidget(self.deptGrpBox)
 
         ## Add a check to a dept or all depts at once
@@ -527,7 +570,10 @@ class ConfigUI(QWidget):
 
     def selAll(self, val = True):
         cursor = QCursor()
-        deptName = [w.objectName() for w in widgets_at(cursor.pos()) if 'GroupBox' in w.objectName()][0].replace('GroupBox', '')
+        try:
+            deptName = [w.objectName() for w in widgets_at(cursor.pos()) if 'GroupBox' in w.objectName()][0].replace('GroupBox', '')
+        except IndexError:
+            print 'Failed to list widet. Please right click again.'
         for checkDept, radioBoxes in self.configData.items():
             if checkDept == deptName:
                 for checkName, radioBox in radioBoxes.items():

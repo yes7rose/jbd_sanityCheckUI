@@ -1,25 +1,26 @@
 activechecks:
-  anim: [unknown]
-  light: [DeadUtility, unknown, UtilityNames, geoSuffix, duplicateNames, constructionHistory]
-  mdl: [intermediateObject, grpSuffix, unknown, pastedNodes, animCurves, UtilityNames,
-    geoSuffix, duplicateNames, transformGeometry, references, endingWith##, constructionHistory,
-    shapeNames]
-  rig: [intermediateObject, grpSuffix, unknown, pastedNodes, animCurves, UtilityNames,
-    geoSuffix, duplicateNames, transformGeometry, references, endingWith##, constructionHistory,
-    shapeNames]
+  anim: []
+  light: []
+  mdl: [intermediateObject, DeadUtility, nurbsCurve, grpSuffix, unknown, pastedNodes,
+    animCurves, UtilityNames, geoSuffix, duplicateNames, transformGeometry, references,
+    endingWith##, constructionHistory, shapeNames]
+  rig: [intermediateObject, DeadUtility, nurbsCurve, grpSuffix, unknown, pastedNodes,
+    animCurves, UtilityNames, geoSuffix, duplicateNames, transformGeometry, references,
+    endingWith##, constructionHistory, shapeNames]
 checkList: [geoSuffix, duplicateNames, constructionHistory, DeadUtility, UtilityNames,
   intermediateObject, shapeNames, references, pastedNodes, animCurves, grpSuffix,
-  transformGeometry, endingWith##, unknown]
+  transformGeometry, endingWith##, unknown, nurbsCurve]
 rcMenu:
   DeadUtility: []
   UtilityNames: []
   animCurves: []
   constructionHistory: []
   duplicateNames: [rename, removeShapes]
-  endingWith##: [rename]
+  endingWith##: [rename, AddGeoSuffix, AddGrpSuffix, AddCrvSuffix]
   geoSuffix: [rename, AddGeoSuffix]
   grpSuffix: [rename, AddGrpSuffix]
   intermediateObject: []
+  nurbsCurve: [rename, AddCrvSuffix]
   pastedNodes: []
   references: []
   shapeNames: []
