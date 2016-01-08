@@ -7,8 +7,8 @@ from PySide.QtCore import *
 import os, sys, yaml, logging
 from functools import partial
 logger = logging.getLogger(__name__)
-import lib.sanity as sanity
-import lib.CONST as CONST
+import sanity_lib.sanity as sanity
+import sanity_lib.CONST as CONST
 import maya.cmds as cmds
 SEP = " |  | " ## Used in the listWidgets to make it easier to read the long names
 
@@ -84,7 +84,18 @@ class SanityUI(QMainWindow):
         self.performChecks.clicked.connect(self._performChecks)
         self.toolBar.addWidget(self.performChecks)
 
+        self.changeConfigAction = QPushButton('Edit Config', self)
+        ic = QIcon("{}/iconmonstr-gear-11-240.png" .format(CONST.ICONPATH))
+        self.changeConfigAction.setIcon(ic)
+        self.changeConfigAction.setToolTip('Change the config settings')
+        self.changeConfigAction.clicked.connect(self._editConfig)
+        self.toolBar.addWidget(self.changeConfigAction)
+
         return self.toolBar
+
+    def _editConfig(self):
+        self.configWin = ConfigUI()
+        self.configWin.show()
 
     def _initCheckDock(self):
         self.dock = QDockWidget(self)
@@ -107,6 +118,7 @@ class SanityUI(QMainWindow):
             self.dockLayout.addLayout(self.buttonLayout, 0, 0)
 
     def _initCheckBoxes(self, stateCB = None):
+        self.config = loadConfig()
         ## Clean the previous checkboxes from widget
         if self.checkBoxes:
             for eachCBox in self.checkBoxes:
@@ -413,15 +425,142 @@ class ReportWindow(QWidget):
         self.rightClickMenu.show()
 
 
+
+class ConfigUI(QWidget):
+    def __init__(self, parent = None, label = "Config"):
+        QWidget.__init__(self, parent)
+        self.label = label
+        self.setWindowTitle(self.label)
+        self.setObjectName(self.label)
+        self.mainLayout = QVBoxLayout(self)
+        self.config = loadConfig()
+        self.configData = {}
+        self.__initMainLayout()
+        self._initRCMenu()
+
+    def __initMainLayout(self):
+        """
+        Setup the mainLayout for the UI
+        :return:
+        """
+        self.checksLayout = QVBoxLayout(self)
+        checks = self.config["checks"]
+        for checkDept, checkList in checks.items():
+            self.configData[checkDept] = {}
+            self.deptGrpBox = QGroupBox(self)
+            self.deptGrpBox.setObjectName('{}GroupBox'.format(checkDept))
+            self.deptGrpBox.setTitle(checkDept)
+            self.deptGrpBoxLayout = QHBoxLayout(self.deptGrpBox)
+
+            self.deptGrpBox.setContextMenuPolicy(Qt.CustomContextMenu)
+            self.deptGrpBox.customContextMenuRequested.connect(self.showRightClickMenu)
+
+            for eachCheck in self.config["checkList"]:
+                self.addRadioBox = QRadioButton(eachCheck)
+                self.addRadioBox.setObjectName(eachCheck)
+                self.addRadioBox.setAutoExclusive(False)
+                for eachItem in checkList:
+                    if eachItem == eachCheck:
+                        self.addRadioBox.setChecked(True)
+
+                self.deptGrpBoxLayout.addWidget(self.addRadioBox)
+                self.configData[checkDept][eachCheck] = self.addRadioBox
+            self.checksLayout.addWidget(self.deptGrpBox)
+
+        ## Add a check to a dept or all depts at once
+        self.mainLayout.addLayout(self.checksLayout)
+
+        self.saveButton = QPushButton('Save')
+        self.saveButton.clicked.connect(self.saveConfig)
+        self.cancelButton = QPushButton('Close')
+        self.cancelButton.clicked.connect(self.close)
+
+        self.mainLayout.addWidget(self.saveButton)
+        self.mainLayout.addWidget(self.cancelButton)
+
+    def _initRCMenu(self):
+        self.rightClickMenu = QMenu()
+        self.rightClickMenu.setObjectName('CheckMenu')
+        self.rightClickMenu.setWindowTitle('CheckMenu')
+
+        ## DEFAULT Right click menu actions
+        self.selAllAction = QAction('Select All', self)
+        self.selAllAction.setIcon(QIcon("{}/iconmonstr-trash-can-5-240.png" .format(CONST.ICONPATH)))
+        self.selAllAction.triggered.connect(partial(self.selAll, True))
+
+        self.deselAllAction = QAction('DeSelect All', self)
+        self.deselAllAction.setIcon(QIcon("{}/iconmonstr-trash-can-5-240.png" .format(CONST.ICONPATH)))
+        self.deselAllAction.triggered.connect(partial(self.selAll, True))
+
+        ## Add the defaults now
+        self.rightClickMenu.addSeparator()
+        self.rightClickMenu.addAction(self.selAllAction)
+
+    def showRightClickMenu(self, position):
+        cursor = QCursor()
+        self.rightClickMenu.exec_(cursor.pos())
+        self.rightClickMenu.show()
+
+    def saveConfig(self):
+        ## Process checks for which are on or off
+        data = {}
+        for key, var in self.config.items():
+            data[key] = var
+
+        for checkDept, radioBoxes in self.configData.items():
+            validChecks = []
+            for checkName, radioBox in radioBoxes.items():
+                if radioBox.isChecked():
+                    validChecks.append(checkName)
+
+            data['checks'][checkDept] = validChecks
+
+        _dumpYAML(data)
+        print 'Config updated successfully.'
+        self.close()
+
+    def selAll(self, val = True):
+        cursor = QCursor()
+        deptName = [w.objectName() for w in widgets_at(cursor.pos()) if 'GroupBox' in w.objectName()][0].replace('GroupBox', '')
+        for checkDept, radioBoxes in self.configData.items():
+            if checkDept == deptName:
+                for checkName, radioBox in radioBoxes.items():
+                    radioBox.setChecked(val)
+
 ################### FUNCS
 def loadConfig():
-    myPath = os.path.realpath(__file__)
-    myPath = myPath.split(os.path.sep)
-    myPath = "\\".join(myPath[:-1])
-    filePath = "%s\\ui\\CONFIG.yaml" % myPath
+    configPath = os.path.realpath(__file__)
+    configPath = configPath.split(os.path.sep)
+    configPath = "\\".join(configPath[:-1])
+    filePath = "%s\\CONFIG.yaml" % configPath
     return _readYAML(filePath)
 
 def _readYAML(filePath):
     f = open(filePath, "r")
     data = yaml.load(f)
     return data
+
+def _dumpYAML(data):
+    configPath = os.path.realpath(__file__)
+    configPath = configPath.split(os.path.sep)
+    configPath = "\\".join(configPath[:-1])
+    filePath = "%s\\CONFIG.yaml" % configPath
+    with open(filePath, 'w') as outfile:
+        outfile.write(yaml.dump(data))
+
+def widgets_at(pos):
+    """Return ALL widgets at `pos`
+    Arguments:
+        pos (QPoint): Position at which to get widgets
+    """
+    widgets = []
+    widget_at = qApp.widgetAt(pos)
+    while widget_at:
+        widgets.append(widget_at)
+        # Make widget invisible to further enquiries
+        widget_at.setAttribute(Qt.WA_TransparentForMouseEvents)
+        widget_at = qApp.widgetAt(pos)
+    # Restore attribute
+    for widget in widgets:
+        widget.setAttribute(Qt.WA_TransparentForMouseEvents, False)
+    return widgets
