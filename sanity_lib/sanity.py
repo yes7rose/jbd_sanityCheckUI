@@ -66,6 +66,8 @@ def collectSanityData():
 
     data["endingWith##"] = [node for node in cmds.ls() if re.search(r'\d+$', node) and cmds.nodeType(node) not in IGNORETYPES]
 
+    data["unknown"] = cmds.ls(type = 'unknown', l = True)
+
     return data
 
 def checkGeoSuffix(data):
@@ -211,6 +213,9 @@ def sanityCheck():
 
     ## pastedNodes
     sanitydata['pastedNodes'] = data["pastedNodes"]
+
+    ## unknown
+    sanitydata['unknown'] = data["unknown"]
 
     return sanitydata
 

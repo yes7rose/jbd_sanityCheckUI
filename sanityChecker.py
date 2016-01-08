@@ -51,25 +51,25 @@ class SanityUI(QMainWindow):
         self.toolBar.setMovable(False)
         self.toolBar.setAllowedAreas(Qt.TopToolBarArea)
         self.mdlAction = QAction('mdl', self)
-        ic = QIcon("{}/iconmonstr-cube-11-240.png" .format(CONST.ICONPATH))
+        ic = QIcon("{}/iconmonstr-cube-11-240.png".format(CONST.ICONPATH))
         self.mdlAction.setIcon(ic)
         self.mdlAction.setToolTip('Set checks for modeling dept')
         self.mdlAction.triggered.connect(partial(self._initCheckBoxes, stateCB = 'mdl'))
 
         self.rigAction = QAction('rig', self)
-        ic = QIcon("{}/iconmonstr-magic-6-240.png" .format(CONST.ICONPATH))
+        ic = QIcon("{}/iconmonstr-magic-6-240.png".format(CONST.ICONPATH))
         self.rigAction.setIcon(ic)
         self.rigAction.setToolTip('Set checks for rig dept')
         self.rigAction.triggered.connect(partial(self._initCheckBoxes, stateCB = 'rig'))
 
         self.animAction = QAction('anim', self)
-        ic = QIcon("{}/iconmonstr-direction-10-240.png" .format(CONST.ICONPATH))
+        ic = QIcon("{}/iconmonstr-direction-10-240.png".format(CONST.ICONPATH))
         self.animAction.setIcon(ic)
         self.animAction.setToolTip('Set checks for anim dept')
         self.animAction.triggered.connect(partial(self._initCheckBoxes, stateCB = 'anim'))
 
         self.lightAction = QAction('light', self)
-        ic = QIcon("{}/iconmonstr-light-bulb-16-240.png" .format(CONST.ICONPATH))
+        ic = QIcon("{}/iconmonstr-light-bulb-16-240.png".format(CONST.ICONPATH))
         self.lightAction.setIcon(ic)
         self.lightAction.setToolTip('Set checks for lighting dept')
         self.lightAction.triggered.connect(partial(self._initCheckBoxes, stateCB = 'light'))
@@ -80,12 +80,17 @@ class SanityUI(QMainWindow):
         self.toolBar.addAction(self.lightAction)
         self.toolBar.addSeparator()
 
-        self.performChecks = QPushButton(QIcon("{}/iconmonstr-log-out-4-240.png" .format(CONST.ICONPATH)), 'CHECK NOW')
+        self.performChecks = QPushButton(QIcon("{}/iconmonstr-log-out-4-240.png".format(CONST.ICONPATH)), 'CHECK NOW')
         self.performChecks.clicked.connect(self._performChecks)
         self.toolBar.addWidget(self.performChecks)
 
+        self.space01 = QWidget(self)
+        self.space01.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.toolBar.addWidget(self.space01)
+
+        self.toolBar.addSeparator()
         self.changeConfigAction = QPushButton('Edit Config', self)
-        ic = QIcon("{}/iconmonstr-gear-11-240.png" .format(CONST.ICONPATH))
+        ic = QIcon("{}/iconmonstr-gear-11-240.png".format(CONST.ICONPATH))
         self.changeConfigAction.setIcon(ic)
         self.changeConfigAction.setToolTip('Change the config settings')
         self.changeConfigAction.clicked.connect(self._editConfig)
@@ -133,8 +138,8 @@ class SanityUI(QMainWindow):
 
         ## Setup the list now
         self.checkLayout = QVBoxLayout(self)
-        if self.state in self.config['checks'].keys():
-            self.checkList = self.config['checks'][self.state]
+        if self.state in self.config['activechecks'].keys():
+            self.checkList = self.config['activechecks'][self.state]
             for eachCheck in self.checkList:
                 self.radioButton = QRadioButton(eachCheck, self)
                 self.radioButton.setObjectName(eachCheck)
@@ -309,7 +314,7 @@ class ReportWindow(QWidget):
 
         ## DEFAULT Right click menu actions
         self.deleteAction = QAction('Delete', self)
-        self.deleteAction.setIcon(QIcon("{}/iconmonstr-trash-can-5-240.png" .format(CONST.ICONPATH)))
+        self.deleteAction.setIcon(QIcon("{}/iconmonstr-trash-can-5-240.png".format(CONST.ICONPATH)))
         self.deleteAction.triggered.connect(partial(self.processItems, case = 'delete'))
 
         ## Add the custom menu items to this report view
@@ -444,7 +449,7 @@ class ConfigUI(QWidget):
         :return:
         """
         self.checksLayout = QVBoxLayout(self)
-        checks = self.config["checks"]
+        checks = self.config['activechecks']
         for checkDept, checkList in checks.items():
             self.configData[checkDept] = {}
             self.deptGrpBox = QGroupBox(self)
@@ -485,16 +490,17 @@ class ConfigUI(QWidget):
 
         ## DEFAULT Right click menu actions
         self.selAllAction = QAction('Select All', self)
-        self.selAllAction.setIcon(QIcon("{}/iconmonstr-trash-can-5-240.png" .format(CONST.ICONPATH)))
+        self.selAllAction.setIcon(QIcon("{}/iconmonstr-checkbox-10-240.png".format(CONST.ICONPATH)))
         self.selAllAction.triggered.connect(partial(self.selAll, True))
 
         self.deselAllAction = QAction('DeSelect All', self)
-        self.deselAllAction.setIcon(QIcon("{}/iconmonstr-trash-can-5-240.png" .format(CONST.ICONPATH)))
-        self.deselAllAction.triggered.connect(partial(self.selAll, True))
+        self.deselAllAction.setIcon(QIcon("{}/iconmonstr-minus-4-240.png".format(CONST.ICONPATH)))
+        self.deselAllAction.triggered.connect(partial(self.selAll, False))
 
         ## Add the defaults now
         self.rightClickMenu.addSeparator()
         self.rightClickMenu.addAction(self.selAllAction)
+        self.rightClickMenu.addAction(self.deselAllAction)
 
     def showRightClickMenu(self, position):
         cursor = QCursor()
@@ -513,7 +519,7 @@ class ConfigUI(QWidget):
                 if radioBox.isChecked():
                     validChecks.append(checkName)
 
-            data['checks'][checkDept] = validChecks
+            data['activechecks'][checkDept] = validChecks
 
         _dumpYAML(data)
         print 'Config updated successfully.'
