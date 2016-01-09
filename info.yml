@@ -8,29 +8,14 @@
 configuration:
     display_name:
         type:           str
-        default_value:  createShotCam
-        description:    Fetches the latest layout camera for the current shot
-
-    fps:
-        type:           int
-        default_value:  25
-        description:    Frames per second, default PAL 25fps, valid options are 24, 25, 30
-
-    gateImagePath:
-        type:           str
-        default_value:  pathtofile
-        description:    path to the gate image
-
-    suffix:
-        type:           str
-        default_value:  shotCam
-        description:    the camera suffix this assumes a _ will preceed it eg sh010_shotCam
+        default_value:  sanityCheckUI
+        description:    Opens the sanityCheckUI Tool
 
 # the Shotgun fields that this app needs in order to operate correctly
 requires_shotgun_fields:
 
 # More verbose description of this item 
-display_name: "Camera..."
+display_name: "SanityCheck..."
 description: ""
 
 # Required minimum versions for this item to run

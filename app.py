@@ -10,7 +10,12 @@ logger = logging.getLogger(__name__)
 from tank.platform import Application
 import tank.templatekey
 import sgtk
+import os, sys
+basePath = os.path.realpath(__file__)
+basePath = basePath.split(os.path.sep)
+basePath = "\\".join(basePath[:-1])
 
+sys.path.append(basePath)
 
 class SanityCheckerUI(Application):
     def init_app(self):
@@ -22,13 +27,11 @@ class SanityCheckerUI(Application):
                                  "an entity as part of the context in order to work.")
         getDisplayName = self.get_setting('display_name')
         self.engine.register_command(getDisplayName, self.run_app)
-        self.lib = self.import_module("sanity_lib")
-        logger.info('%s Loaded...' % getDisplayName)
 
     def run_app(self):
         """
         Callback from when the menu is clicked.
         """
-        self.lib = self.import_module("sanity_lib")
-        logger.info('self.lib: %s' % self.lib)
-        inprogressBar = self.lib.ProgressBarUI(title = 'Building Shotcam:')
+        import sanityChecker as sanity
+        self.myWin = sanity.SanityUI()
+        self.myWin.show()

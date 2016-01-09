@@ -683,19 +683,19 @@ def _dumpYAML(data):
     with open(filePath, 'w') as outfile:
         outfile.write(yaml.dump(data))
 
-def widgets_at(pos):
-    """Return ALL widgets at `pos`
-    Arguments:
-        pos (QPoint): Position at which to get widgets
-    """
-    widgets = []
-    widget_at = qApp.widgetAt(pos)
-    while widget_at:
-        widgets.append(widget_at)
-        # Make widget invisible to further enquiries
-        widget_at.setAttribute(Qt.WA_TransparentForMouseEvents)
-        widget_at = qApp.widgetAt(pos)
-    # Restore attribute
-    for widget in widgets:
-        widget.setAttribute(Qt.WA_TransparentForMouseEvents, False)
-    return widgets
+# def widgets_at(pos):
+#     """Return ALL widgets at `pos`
+#     Arguments:
+#         pos (QPoint): Position at which to get widgets
+#     """
+#     widgets = []
+#     widget_at = qApp.widgetAt(pos)
+#     while widget_at:
+#         widgets.append(widget_at)
+#         # Make widget invisible to further enquiries
+#         widget_at.setAttribute(Qt.WA_TransparentForMouseEvents)
+#         widget_at = qApp.widgetAt(pos)
+#     # Restore attribute
+#     for widget in widgets:
+#         widget.setAttribute(Qt.WA_TransparentForMouseEvents, False)
+#     return widgets
