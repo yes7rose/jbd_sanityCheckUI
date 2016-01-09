@@ -1,0 +1,10 @@
+## Some nodes and their respective suffixes in scene
+nodes:
+  matrix:
+    - decomposeMatrix: mtx
+    - composeMatrix: mtx
+    - unitConversion: UC
+    - multiplyDivide: multiplyDivide
+  skin:
+    - skinCluster: skinCluster
+    - dagPose: bindPose
