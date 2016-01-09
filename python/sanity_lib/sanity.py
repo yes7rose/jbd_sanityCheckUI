@@ -118,6 +118,7 @@ def checkShapeNames(data):
     :return:
     """
     errors = []
+    ## POLY MESH SHAPES
     for eachShape in data['mesh']:
         ## Should end in shape
         if not eachShape.endswith('Shape'):
@@ -127,6 +128,38 @@ def checkShapeNames(data):
         ## Shape name should match transform name but with Shape on end the geo suffix
         parentName = cmds.listRelatives(eachShape, parent = True, f = True)[0]
         if "{}Shape".format(parentName.split("|")[-1]) != eachShape.split("|")[-1]:
+            if not eachShape in errors:
+                errors.extend([eachShape])
+    ## NURBS CURVE SHAPES
+    for eachShape in data['nurbsCurve']:
+        ## Should end in shape
+        if not eachShape.endswith('Shape'):
+            if not eachShape in errors:
+                errors.extend([eachShape])
+
+        ## Shape name should match transform name but with Shape on end the geo suffix
+        parentName = cmds.listRelatives(eachShape, parent = True, f = True)[0]
+        if "{}Shape".format(parentName.split("|")[-1]) != eachShape.split("|")[-1]:
+            if not eachShape in errors:
+                errors.extend([eachShape])
+    return errors
+
+def checkSConstructionHistory(data):
+    """
+    Check for bad names
+    :param data: the sanity data collected from scene. Dict from collectSanityData
+    :return:
+    """
+    errors = []
+    ## POLY MESH SHAPES
+    for eachShape in data['mesh']:
+        if len(cmds.listHistory(eachShape)) > 1:
+            if not eachShape in errors:
+                errors.extend([eachShape])
+
+    ## NURBS CURVE SHAPES
+    for eachShape in data['nurbsCurve']:
+        if len(cmds.listHistory(eachShape)) > 1:
             if not eachShape in errors:
                 errors.extend([eachShape])
     return errors
@@ -235,5 +268,7 @@ def sanityCheck():
     ## Base nurbs curves not ending in _crv or _ctrl
     sanitydata['nurbsCurve'] = checkNurbsCurves(data)
 
+    ## Construction history on nurbs curvs and meshes
+    sanitydata['constructionHistory'] = checkSConstructionHistory(data)
     return sanitydata
 

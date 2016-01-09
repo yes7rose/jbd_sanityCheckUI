@@ -25,5 +25,3 @@ basePath = os.path.realpath(__file__)
 basePath = basePath.split(os.path.sep)
 basePath = "\\".join(basePath[:-3])
 ICONPATH = "%s\\icons\\" % basePath
-
-print ICONPATH

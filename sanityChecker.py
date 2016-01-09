@@ -8,7 +8,7 @@ from functools import partial
 from PySide.QtCore import *
 from PySide.QtGui import *
 logger = logging.getLogger(__name__)
-from python import sanity_lib as sanity
+import python.sanity_lib.sanity as sanity
 import python.sanity_lib.CONST as CONST
 import maya.cmds as cmds
 reload(CONST)
@@ -16,6 +16,8 @@ SEP = " |  | " ## Used in the listWidgets to make it easier to read the long nam
 reload(sanity)
 ## TODO add a feature to remove the 1 at the end of the badly numbered items
 ## TODO Fix the bug in shape name checking that geo_Shape shows up and needs cleaning!
+
+
 
 class SanityUI(QMainWindow):
     def __init__(self, parent = None):
@@ -42,7 +44,8 @@ class SanityUI(QMainWindow):
         self.addToolBar(self._initToolBar())
 
         ## Final layout stuff
-        self.setDockNestingEnabled(True)
+        self.setDockNestingEnabled(False)
+        self.setTabPosition(Qt.LeftDockWidgetArea, QTabWidget.North)
         self.resize(1200, 600)
 
     def _initToolBar(self):
@@ -103,14 +106,13 @@ class SanityUI(QMainWindow):
         self.configWin.show()
 
     def _initCheckDock(self):
-        self.dock = QDockWidget(self)
-        self.dock.setFeatures(QDockWidget.NoDockWidgetFeatures)
-        self.dock.setWindowTitle('{} Sanity Checks:'.format(self.state))
+        self.checksDock = QDockWidget(self)
+        self.checksDock.setFeatures(QDockWidget.NoDockWidgetFeatures)
+        self.checksDock.setWindowTitle('{} Sanity Checks:'.format(self.state))
         self.dockWidget = QWidget()
-        self.dock.setWidget(self.dockWidget)
+        self.checksDock.setWidget(self.dockWidget)
         self.dockLayout = QGridLayout(self.dockWidget)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.dock)
-        self.dock.setMinimumWidth(150)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.checksDock)
 
         if not hasattr(self, 'buttonLayout'):
             self.buttonLayout = QHBoxLayout(self)
@@ -134,7 +136,7 @@ class SanityUI(QMainWindow):
         ## CHeck to see if we're changing the list to a new one or not
         if stateCB:
             self.state = stateCB
-            self.dock.setWindowTitle('%s Sanity Checks:' % self.state)
+            self.checksDock.setWindowTitle('%s Sanity Checks:' % self.state)
 
         ## Setup the list now
         self.checkLayout = QVBoxLayout(self)
@@ -156,17 +158,18 @@ class SanityUI(QMainWindow):
         self.dockLayout.rowStretch(3)
 
     def _initChecksPassed(self):
-        self.dockStatus = QDockWidget(self)
-        self.dockStatus.hide()
-        self.dockStatus.setWindowTitle('Check Results')
-        self.dockStatus.setFeatures(QDockWidget.NoDockWidgetFeatures)
+        self.checkResultsDock = QDockWidget(self)
+        self.checkResultsDock.hide()
+        self.checkResultsDock.setWindowTitle('Check Results')
+        self.checkResultsDock.setFeatures(QDockWidget.NoDockWidgetFeatures)
 
-        self.dockStatusWidget = QWidget()
-        self.dockStatus.setWidget(self.dockStatusWidget)
-        self.dockStatusLayout = QHBoxLayout(self.dockStatusWidget)
+        self.checkResultsDockWidget = QWidget()
+        self.checkResultsDock.setWidget(self.checkResultsDockWidget)
+        self.checkResultsDockLayout = QHBoxLayout(self.checkResultsDockWidget)
 
         self.failedGrpBox = QGroupBox(self)
-        self.failedGrpBox.setStyleSheet("QGroupBox{border: 1px solid gray; border-radius: 9px;}")
+        #self.failedGrpBox.setStyleSheet("QGroupBox{border: 1px solid gray; border-radius: 9px;}")
+        self.failedGrpBox.setStyleSheet("QGroupBox{border-radius: 15px; border: 2px solid gray; font-size: 18px; font-weight: bold;margin-top: 5ex;} QGroupBox::title{padding: -50 1 1 1;}")
         self.failedGrpBox.setTitle('Failed:')
         self.failedGrpBoxLayout = QVBoxLayout(self.failedGrpBox)
 
@@ -179,7 +182,7 @@ class SanityUI(QMainWindow):
 
         self.passedGrpBox = QGroupBox(self)
         self.passedGrpBox.setTitle('Passed:')
-        self.passedGrpBox.setStyleSheet("QGroupBox{border: 1px solid gray; border-radius: 9px;}")
+        self.passedGrpBox.setStyleSheet("QGroupBox{border-radius: 15px; border: 2px solid gray; font-size: 18px; font-weight: bold;margin-top: 5ex;} QGroupBox::title{padding: -50 1 1 1;}")
         self.passedGrpBoxLayout = QVBoxLayout(self.passedGrpBox)
         self.passedList = QListWidget(self)
         self.passedList.setEnabled(False)
@@ -187,13 +190,12 @@ class SanityUI(QMainWindow):
 
         self.passedGrpBoxLayout.addWidget(self.passedList)
 
-        self.dockStatusLayout.addWidget(self.passedGrpBox)
-        self.dockStatusLayout.addWidget(self.failedGrpBox)
+        self.checkResultsDockLayout.addWidget(self.passedGrpBox)
+        self.checkResultsDockLayout.addWidget(self.failedGrpBox)
 
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.dockStatus)
-        self.dockStatus.setMaximumWidth(300)
-        self.tabifyDockWidget(self.dock, self.dockStatus)
-        self.splitDockWidget(self.dock, self.dockStatus, Qt.Horizontal)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.checkResultsDock)
+        self.checkResultsDock.setMaximumWidth(300)
+        self.tabifyDockWidget(self.checksDock, self.checkResultsDock)
 
     def toggleCheckBoxes(self, val = False):
         if self.checkBoxes:
@@ -213,7 +215,7 @@ class SanityUI(QMainWindow):
 
         self.failedList.clear()
         self.passedList.clear()
-        self.dockStatus.show()
+        self.checkResultsDock.show()
 
         self.failed = False
         for eachRB in self.checkBoxes:
@@ -224,7 +226,7 @@ class SanityUI(QMainWindow):
                         self.failedList.setEnabled(True)
                         self.reportQL = ReportWindow(self, eachRB.objectName())
                         self.reportQL.addData(data[eachRB.objectName()])
-                        index = self.tabWidget.addWidget(self.reportQL)#, eachRB.objectName())
+                        index = self.tabWidget.addWidget(self.reportQL)
                         self.failedList.addItem(eachRB.objectName())
                         self.reports.extend([self.reportQL])
                     else:
@@ -232,17 +234,18 @@ class SanityUI(QMainWindow):
 
         if not self.failed:
             self.allPassedWidget = QWidget(self)
-            self.allPassedLayout = QVBoxLayout(self.allPassedWidget)
+            self.allPassedLayout = QHBoxLayout(self.allPassedWidget)
+
             self.passed = QPixmap("{}/iconmonstr-checkbox-10-240.png".format(CONST.ICONPATH))
             self.passed.scaled(800, 600, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
-
             self.passedLabel = QSplashScreen(self.passed)
-
             self.allPassedLayout.addWidget(self.passedLabel)
 
             self.tabWidget.addWidget(self.allPassedWidget)
-
             self.reports.extend([self.allPassedWidget])
+
+        self.checkResultsDock.show()
+        self.checkResultsDock.raise_()
 
 
 
@@ -257,7 +260,6 @@ class ReportWindow(QWidget):
         self.config = loadConfig()
         self.data = {}
         self.__initMainLayout()
-
         self.setFocus()
 
     def __initMainLayout(self):
@@ -266,14 +268,15 @@ class ReportWindow(QWidget):
         :return:
         """
         self.groupBox = QGroupBox(self)
-        self.groupBox.setTitle('{} failed items:'.format(self.label))
-        self.groupBox.setStyleSheet("QGroupBox{border: 1px solid gray; border-radius: 9px;} QGroupBox::title {subcontrol-origin: margin;left: 100px;padding: -5 3px 0 3px;}")
-
+        self.groupBox.setTitle('{}:'.format(self.label))
+        self.groupBox.setStyleSheet("QGroupBox{border-radius: 15px; border: 2px solid gray; font-size: 18px; font-weight: bold;margin-top: 5ex;} QGroupBox::title{padding: -50 1 1 1;}")
         self.groupBoxLayout = QVBoxLayout(self.groupBox)
 
         self.reportTree = QListWidget(self)
         self.reportTree.setSelectionMode(QAbstractItemView.ExtendedSelection)
+
         self._initRCMenu()
+        ## Set the rick click menus now
         self.reportTree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.reportTree.customContextMenuRequested.connect(self.showRightClickMenu)
         self.reportTree.itemClicked.connect(partial(self.processItems, case = 'select'))
@@ -285,7 +288,6 @@ class ReportWindow(QWidget):
         self.rightClickMenu = QMenu()
         self.rightClickMenu.setObjectName('Actions')
         self.rightClickMenu.setWindowTitle('Actions')
-
         ################################################################################################################
         ################################################################################################################
         ## ADD CUSTOM ACTIONS FOR CUSTOM SANITY CHECKS HERE
@@ -311,22 +313,27 @@ class ReportWindow(QWidget):
         self.renameAction.setIcon(QIcon("{}/iconmonstr-tumblr-4-240.png".format(CONST.ICONPATH)))
         self.renameAction.triggered.connect(partial(self.renamePopUpUI))
 
+        self.deleteCHAction = QAction('Delete ConsHist', self)
+        self.deleteCHAction.setObjectName('constructionHistory')
+        self.deleteCHAction.setIcon(QIcon("{}/iconmonstr-trash-can-5-240.png".format(CONST.ICONPATH)))
+        self.deleteCHAction.triggered.connect(partial(self.processItems, case = 'deleteCH'))
+
         self.removeShapesAction = QAction('Remove Shapes from List', self)
         self.removeShapesAction.setObjectName('removeShapes')
-        self.removeShapesAction.setIcon(QIcon("{}/iconmonstr-tumblr-4-240.png".format(CONST.ICONPATH)))
+        self.removeShapesAction.setIcon(QIcon("{}/iconmonstr-eye-3-icon-256.png".format(CONST.ICONPATH)))
         self.removeShapesAction.triggered.connect(partial(self.removeFromList, '{}Shape'.format(CONST.GEOMETRY_SUFFIX)))
 
-        self.actions = [self.geoSuffixAction, self.grpSuffixAction, self.crvSuffixAction, self.renameAction, self.removeShapesAction]
+        self.actions = [self.geoSuffixAction, self.grpSuffixAction, self.crvSuffixAction, self.renameAction,
+                        self.removeShapesAction, self.deleteCHAction]
         ################################################################################################################
         ################################################################################################################
-
         ## DEFAULT Right click menu actions
         self.deleteAction = QAction('Delete', self)
         self.deleteAction.setIcon(QIcon("{}/iconmonstr-trash-can-5-240.png".format(CONST.ICONPATH)))
         self.deleteAction.triggered.connect(partial(self.processItems, case = 'delete'))
 
         ## Add the custom menu items to this report view
-        actionsToDisplay = self.config["rcMenu"][self.label]
+        actionsToDisplay = self.config["rightClickCheckSubMenus"][self.label]
         for eachAction in self.actions:
             if eachAction.objectName() in actionsToDisplay:
                 self.rightClickMenu.addAction(eachAction)
@@ -367,6 +374,8 @@ class ReportWindow(QWidget):
                     cmds.select(eachItem.text().replace(SEP, "|"), add = True, ne = True)
                 elif case == 'delete':
                     cmds.delete(eachItem.text().replace(SEP, "|"))
+                elif case == 'deleteCH':
+                    cmds.delete(eachItem.text().replace(SEP, "|"), ch = True)
         else:
             count = self.reportTree.count()
             items = []
@@ -378,6 +387,9 @@ class ReportWindow(QWidget):
                 cmds.select(items, r = True, ne = True)
             elif case == 'delete':
                 cmds.delete(items)
+            elif case == 'deleteCH':
+                cmds.delete(items, ch = True)
+
         cmds.undoInfo(closeChunk = True)
 
     def addSuffix(self, suffix = ''):
@@ -461,44 +473,127 @@ class ReportWindow(QWidget):
         self.rightClickMenu.show()
 
 
-class CheckLists(QWidget)
-    ##TODO Change this layout to be 2 list boxes that you can move items over to valid or not as I can se this list becoming stupidly long.
-    def __init__(self, parent = None, label = "", data = {}):
+
+class ConfigCheckLists(QWidget):
+    def __init__(self, parent = None, label = "", allChecks_List = {}, activeCheck_List = {}):
         QWidget.__init__(self, parent)
         self.label = label
-        self.data = data
+        self.allChecks_List = allChecks_List
+        self.activeChecks_List = activeCheck_List
+
+        ## Set base widget up
         self.setWindowTitle(self.label)
         self.setObjectName(self.label)
         self.mainLayout = QVBoxLayout(self)
 
+        ## Initialize the UI
+        self._initUI()
+        ## Add the data to the list widgets
+        self._addData()
+
+    def _initUI(self):
         self.groupBox = QGroupBox(self)
         self.groupBox.setTitle(self.label)
+        self.groupBox.setStyleSheet("QGroupBox{border-radius: 15px; border: 2px solid gray; font-size: 18px; font-weight: bold;margin-top: 5ex;} QGroupBox::title{padding: -50 1 1 1;}")
         self.groupBoxLayout = QHBoxLayout(self.groupBox)
 
-        self.baseList = QListWidget(self)
-        self.activeList = QListWidget(self)
+        ################################################################################################################
+        ## The base list widgets, using these over M/View for speed of setup.
+        self.allChecks_ListWidget = QListWidget(self)
+        self.allChecks_ListWidget.setSelectionMode(QAbstractItemView.ExtendedSelection)
 
+        self.activeChecks_ListWidget = QListWidget(self)
+        self.activeChecks_ListWidget.setSelectionMode(QAbstractItemView.ExtendedSelection)
+
+        ################################################################################################################
+        ## Button Layout
         self.buttonLayout = QVBoxLayout(self)
-        self.moveToActiveButton = QPushButton(QIcon('{}\\.png'.format(CONST.ICONPATH)))
-        self.moveToBaseButton = QPushButton(QIcon('{}\\.png'.format(CONST.ICONPATH)))
+        self.moveToActiveButton = QPushButton(QIcon('{}\\iconmonstr-arrow-52-240PntRight.png'.format(CONST.ICONPATH)), '', self)
+        self.moveToActiveButton.clicked.connect(partial(self._addToActiveList))
+        self.moveToActiveButton.setToolTip('Add to active sanity checks for this dept')
 
-        self.groupBoxLayout.addWidget(self.baseList)
+        self.moveToBaseButton = QPushButton(QIcon('{}\\iconmonstr-arrow-52-240PntLeft.png'.format(CONST.ICONPATH)), '', self)
+        self.moveToBaseButton.clicked.connect(partial(self._removeFromActiveList))
+        self.moveToBaseButton.setToolTip('Remove from active sanity checks for this dept')
+
+        self.addAllToBaseButton = QPushButton(QIcon('{}\\iconmonstr-arrowPntLeft-32-240.png'.format(CONST.ICONPATH)), '', self)
+        self.addAllToBaseButton.clicked.connect(partial(self._removeFromActiveList, False))
+        self.addAllToBaseButton.setToolTip('Remove ALL from active sanity checks for this dept')
+
+        self.addAllToActiveButton = QPushButton(QIcon('{}\\iconmonstr-arrowPntRight-32-240.png'.format(CONST.ICONPATH)), '', self)
+        self.addAllToActiveButton.clicked.connect(partial(self._addToActiveList, False))
+        self.addAllToActiveButton.setToolTip('Add ALL to active sanity checks for this dept')
+
+        self.buttonLayout.addWidget(self.moveToActiveButton)
+        self.buttonLayout.addWidget(self.moveToBaseButton)
+        self.buttonLayout.addWidget(self.addAllToBaseButton)
+        self.buttonLayout.addWidget(self.addAllToActiveButton)
+        self.buttonLayout.addStretch(1)
+
+        self.groupBoxLayout.addWidget(self.allChecks_ListWidget)
         self.groupBoxLayout.addLayout(self.buttonLayout)
-        self.groupBoxLayout.addWidget(self.activeList)
+        self.groupBoxLayout.addWidget(self.activeChecks_ListWidget)
 
         self.mainLayout.addWidget(self.groupBox)
 
     def _addData(self):
-        pass
+        self.allChecks_ListWidget.clear()
+        self.activeChecks_ListWidget.clear()
 
-    def _addToActiveList(self):
-        pass
+        ## Add everything to the baseList that isn't in the activeList
+        for eachItem in self.allChecks_List:
+            if eachItem not in self.activeChecks_List:
+                self.allChecks_ListWidget.addItem(eachItem)
 
-    def _removeFromActiveList(self):
-        pass
+        ## Now put the actives into the activeList
+        for eachItem in self.activeChecks_List:
+            self.activeChecks_ListWidget.addItem(eachItem)
+
+    def _addToActiveList(self, selected = True):
+        if selected:
+            for eachItem in self.allChecks_ListWidget.selectedItems():
+                name = eachItem.text()
+                if name in self.allChecks_List:
+                    self.allChecks_List.remove(name)
+
+                if name not in self.activeChecks_List:
+                    self.activeChecks_List.extend([name])
+        else:
+            count = self.allChecks_ListWidget.count()
+            for x in range(count):
+                name = self.allChecks_ListWidget.item(x).text()
+
+                if name in self.allChecks_List:
+                    self.allChecks_List.remove(name)
+
+                if name not in self.activeChecks_List:
+                    self.activeChecks_List.extend([name])
+        self._addData()
+
+    def _removeFromActiveList(self, selected = True):
+        if selected:
+            for eachItem in self.activeChecks_ListWidget.selectedItems():
+                name = eachItem.text()
+                if name in self.activeChecks_List:
+                    self.activeChecks_List.remove(name)
+
+                if name not in self.allChecks_List:
+                    self.allChecks_List.extend([name])
+        else:
+            count = self.activeChecks_ListWidget.count()
+            for x in range(count):
+                name = self.activeChecks_ListWidget.item(x).text()
+
+                if name in self.activeChecks_List:
+                    self.activeChecks_List.remove(name)
+
+                if name not in self.allChecks_List:
+                    self.allChecks_List.extend([name])
+        self._addData()
+
+
 
 class ConfigUI(QWidget):
-    ##TODO Change this layout to be 2 list boxes that you can move items over to valid or not as I can se this list becoming stupidly long.
     def __init__(self, parent = None, label = "Config"):
         QWidget.__init__(self, parent)
         self.label = label
@@ -506,107 +601,56 @@ class ConfigUI(QWidget):
         self.setObjectName(self.label)
         self.mainLayout = QVBoxLayout(self)
         self.config = loadConfig()
-        self.configData = {}
+        self.uiDataStore = {}
         self.__initMainLayout()
-        self._initRCMenu()
 
     def __initMainLayout(self):
         """
         Setup the mainLayout for the UI
         :return:
         """
-
-        self.checksLayout = QVBoxLayout(self)
-        checks = self.config['activechecks']
-        for checkDept, checkList in checks.items():
-            self.configData[checkDept] = {}
-            self.deptGrpBox = QGroupBox(self)
-            self.deptGrpBox.setObjectName('{}GroupBox'.format(checkDept))
-            self.deptGrpBox.setTitle(checkDept)
-
-            self.deptGrpBoxLayout = QGridLayout(self.deptGrpBox)
-            self.deptGrpBox.setContextMenuPolicy(Qt.CustomContextMenu)
-            self.deptGrpBox.customContextMenuRequested.connect(self.showRightClickMenu)
-
-            self.validChecks = QListWidget(self)
-            self.activeChecks = QListWidget(self)
-
-            for eachCheck in self.config["checkList"]:
-                self.validChecks.addItem(eachCheck)
-
-            for eachItem in checkList:
-                self.activeChecks.addItem(eachItem)
-
-            self.deptGrpBoxLayout.addWidget(self.validChecks)
-            self.deptGrpBoxLayout.addWidget(self.activeChecks)
-
-            ## Now add the groupbox to the layout
-            self.checksLayout.addWidget(self.deptGrpBox)
-
-        ## Add a check to a dept or all depts at once
-        self.mainLayout.addLayout(self.checksLayout)
+        self.checksLayout = QHBoxLayout(self)
+        for checkDept, checkList in self.config["activechecks"].items():
+            self.deptChecksList = ConfigCheckLists(self, checkDept, self.config['allChecks'], self.config["activechecks"][checkDept])
+            self.checksLayout.addWidget(self.deptChecksList)
+            self.uiDataStore[checkDept] = self.deptChecksList
 
         self.saveButton = QPushButton('Save')
-        self.saveButton.clicked.connect(self.saveConfig)
-        self.cancelButton = QPushButton('Close')
-        self.cancelButton.clicked.connect(self.close)
+        self.saveButton.clicked.connect(partial(self._saveConfig, checks = self.config["allChecks"]))
 
+        self.cancelButton = QPushButton('Close')
+        self.cancelButton.clicked.connect(partial(self.close))
+
+        self.mainLayout.addLayout(self.checksLayout)
         self.mainLayout.addWidget(self.saveButton)
         self.mainLayout.addWidget(self.cancelButton)
+        self.resize(1500, 500)
 
-    def _initRCMenu(self):
-        self.rightClickMenu = QMenu()
-        self.rightClickMenu.setObjectName('CheckMenu')
-        self.rightClickMenu.setWindowTitle('CheckMenu')
-
-        ## DEFAULT Right click menu actions
-        self.selAllAction = QAction('Select All', self)
-        self.selAllAction.setIcon(QIcon("{}/iconmonstr-checkbox-10-240.png".format(CONST.ICONPATH)))
-        self.selAllAction.triggered.connect(partial(self.selAll, True))
-
-        self.deselAllAction = QAction('DeSelect All', self)
-        self.deselAllAction.setIcon(QIcon("{}/iconmonstr-minus-4-240.png".format(CONST.ICONPATH)))
-        self.deselAllAction.triggered.connect(partial(self.selAll, False))
-
-        ## Add the defaults now
-        self.rightClickMenu.addSeparator()
-        self.rightClickMenu.addAction(self.selAllAction)
-        self.rightClickMenu.addAction(self.deselAllAction)
-
-    def showRightClickMenu(self, position):
-        cursor = QCursor()
-        self.rightClickMenu.exec_(cursor.pos())
-        self.rightClickMenu.show()
-
-    def saveConfig(self):
+    def _saveConfig(self, checks = []):
+        """
+        For some reason the self.config['allChecks'] turns into an empty list here. So I am forcing a reload of this
+        from the file before writing to it to preserve this list.
+        :param checks:
+        :return:
+        """
+        self.allChecks =  loadConfig()['allChecks']
         ## Process checks for which are on or off
-        data = {}
-        for key, var in self.config.items():
-            data[key] = var
-
-        for checkDept, radioBoxes in self.configData.items():
+        for checkDept, checkWidget in self.uiDataStore.items():
             validChecks = []
-            for checkName, radioBox in radioBoxes.items():
-                if radioBox.isChecked():
-                    validChecks.append(checkName)
+            count = checkWidget.activeChecks_ListWidget.count()
+            for x in range(count):
+                activeCheck = str(checkWidget.activeChecks_ListWidget.item(x).text())
+                validChecks.append(activeCheck)
 
-            data['activechecks'][checkDept] = validChecks
+            self.config['activechecks'][checkDept] = validChecks
 
-        _dumpYAML(data)
+        ## Force the freaking allChecks to be correct!!!
+        self.config['allChecks'] = self.allChecks
+
+        ## Dump to yaml now
+        _dumpYAML(self.config)
         print 'Config updated successfully.'
         self.close()
-
-    def selAll(self, val = True):
-        cursor = QCursor()
-        try:
-            deptName = [w.objectName() for w in widgets_at(cursor.pos()) if 'GroupBox' in w.objectName()][0].replace('GroupBox', '')
-        except IndexError:
-            print 'Failed to list widet. Please right click again.'
-        for checkDept, radioBoxes in self.configData.items():
-            if checkDept == deptName:
-                for checkName, radioBox in radioBoxes.items():
-                    radioBox.setChecked(val)
-
 
 
 ################### FUNCS
@@ -615,12 +659,14 @@ def loadConfig():
     configPath = configPath.split(os.path.sep)
     configPath = "\\".join(configPath[:-1])
     filePath = "%s\\CONFIG.yaml" % configPath
-    return _readYAML(filePath)
+    data = _readYAML(filePath)
+    data[1].close()
+    return data[0]
 
 def _readYAML(filePath):
     f = open(filePath, "r")
     data = yaml.load(f)
-    return data
+    return data, f
 
 def _dumpYAML(data):
     configPath = os.path.realpath(__file__)
