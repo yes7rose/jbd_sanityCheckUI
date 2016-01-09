@@ -34,7 +34,7 @@ def collectSanityData():
     data = {}
 
     ## DupNames
-    data['duplicateNames'] = [node for node in cmds.ls(sn = 1, dag = 1) if '|' in node] or []
+    data['duplicateNames'] = [node for node in cmds.ls(sn = 1, dag = 1) if '|' in node if not node.endswith('Shape')] or []
 
     ## Mesh Shapes
     data['mesh'] = [mesh for mesh in cmds.ls(type='mesh', l = True) if not cmds.getAttr('%s.intermediateObject' % mesh)] or []

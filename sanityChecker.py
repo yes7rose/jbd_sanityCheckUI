@@ -48,6 +48,10 @@ class SanityUI(QMainWindow):
         self.setTabPosition(Qt.LeftDockWidgetArea, QTabWidget.North)
         self.resize(1200, 600)
 
+        # for eachChild in self.children():
+        #     if type(eachChild) == QTabBar:
+        #         eachChild.currentChanged.connect(self._tabChange)
+
     def _initToolBar(self):
         self.toolBar = QToolBar(self)
         self.toolBar.setFloatable(False)
@@ -107,6 +111,7 @@ class SanityUI(QMainWindow):
 
     def _initCheckDock(self):
         self.checksDock = QDockWidget(self)
+        self.checksDock.setMinimumWidth(300)
         self.checksDock.setFeatures(QDockWidget.NoDockWidgetFeatures)
         self.checksDock.setWindowTitle('{} Sanity Checks:'.format(self.state))
         self.dockWidget = QWidget()
@@ -126,6 +131,9 @@ class SanityUI(QMainWindow):
 
     def _initCheckBoxes(self, stateCB = None):
         self.config = loadConfig()
+        self.cbConfigBox = QGroupBox(self)
+        self.cbConfigBox.setTitle("Sanity Checks:")
+        self.cbConfigBox.setStyleSheet("QGroupBox{border-radius: 15px; border: 2px solid gray; font-size: 18px; font-weight: bold;margin-top: 5ex;} QGroupBox::title{padding: -50 1 1 1;}")
         ## Clean the previous checkboxes from widget
         if self.checkBoxes:
             for eachCBox in self.checkBoxes:
@@ -139,7 +147,7 @@ class SanityUI(QMainWindow):
             self.checksDock.setWindowTitle('%s Sanity Checks:' % self.state)
 
         ## Setup the list now
-        self.checkLayout = QVBoxLayout(self)
+        self.checkLayout = QVBoxLayout(self.cbConfigBox)
         if self.state in self.config['activechecks'].keys():
             self.checkList = self.config['activechecks'][self.state]
             for eachCheck in self.checkList:
@@ -150,7 +158,7 @@ class SanityUI(QMainWindow):
                 self.checkBoxes.extend([self.radioButton])
                 self.checkLayout.addWidget(self.radioButton)
 
-            self.dockLayout.addLayout(self.checkLayout, 1, 0)
+            self.dockLayout.addWidget(self.cbConfigBox, 1, 0)
             self.checkLayout.addStretch(1)
         else:
             raise Exception ('Missing key in yaml file for %s' % self.stat)
@@ -159,6 +167,7 @@ class SanityUI(QMainWindow):
 
     def _initChecksPassed(self):
         self.checkResultsDock = QDockWidget(self)
+        self.checkResultsDock.setMinimumWidth(300)
         self.checkResultsDock.hide()
         self.checkResultsDock.setWindowTitle('Check Results')
         self.checkResultsDock.setFeatures(QDockWidget.NoDockWidgetFeatures)
@@ -168,14 +177,12 @@ class SanityUI(QMainWindow):
         self.checkResultsDockLayout = QHBoxLayout(self.checkResultsDockWidget)
 
         self.failedGrpBox = QGroupBox(self)
-        #self.failedGrpBox.setStyleSheet("QGroupBox{border: 1px solid gray; border-radius: 9px;}")
         self.failedGrpBox.setStyleSheet("QGroupBox{border-radius: 15px; border: 2px solid gray; font-size: 18px; font-weight: bold;margin-top: 5ex;} QGroupBox::title{padding: -50 1 1 1;}")
         self.failedGrpBox.setTitle('Failed:')
         self.failedGrpBoxLayout = QVBoxLayout(self.failedGrpBox)
 
         self.failedList = QListWidget(self)
         self.failedList.setEnabled(False)
-        self.failedList.setMaximumWidth(150)
         self.failedList.itemClicked.connect(self._switchTabs)
 
         self.failedGrpBoxLayout.addWidget(self.failedList)
@@ -186,7 +193,6 @@ class SanityUI(QMainWindow):
         self.passedGrpBoxLayout = QVBoxLayout(self.passedGrpBox)
         self.passedList = QListWidget(self)
         self.passedList.setEnabled(False)
-        self.passedList.setMaximumWidth(150)
 
         self.passedGrpBoxLayout.addWidget(self.passedList)
 
@@ -194,7 +200,6 @@ class SanityUI(QMainWindow):
         self.checkResultsDockLayout.addWidget(self.failedGrpBox)
 
         self.addDockWidget(Qt.LeftDockWidgetArea, self.checkResultsDock)
-        self.checkResultsDock.setMaximumWidth(300)
         self.tabifyDockWidget(self.checksDock, self.checkResultsDock)
 
     def toggleCheckBoxes(self, val = False):
@@ -246,6 +251,8 @@ class SanityUI(QMainWindow):
 
         self.checkResultsDock.show()
         self.checkResultsDock.raise_()
+        self.checkResultsDock.setFixedWidth(300)
+        self.checksDock.setFixedWidth(300)
 
 
 
