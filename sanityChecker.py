@@ -1,21 +1,21 @@
 """
 Created by James Dunlop
 2016
+Dependencies yaml
 """
-from PySide.QtGui import *
-from PySide.QtCore import *
-import os, sys, yaml, logging
+import os, yaml, logging
 from functools import partial
+from PySide.QtCore import *
+from PySide.QtGui import *
 logger = logging.getLogger(__name__)
-import sanity_lib.sanity as sanity
-import sanity_lib.CONST as CONST
+from python import sanity_lib as sanity
+import python.sanity_lib.CONST as CONST
 import maya.cmds as cmds
+reload(CONST)
 SEP = " |  | " ## Used in the listWidgets to make it easier to read the long names
 reload(sanity)
-
-## TODO add a feature to allow changing the yaml for the CONST
 ## TODO add a feature to remove the 1 at the end of the badly numbered items
-## TEST!
+## TODO Fix the bug in shape name checking that geo_Shape shows up and needs cleaning!
 
 class SanityUI(QMainWindow):
     def __init__(self, parent = None):
@@ -259,6 +259,7 @@ class ReportWindow(QWidget):
         self.__initMainLayout()
 
         self.setFocus()
+
     def __initMainLayout(self):
         """
         Setup the mainLayout for the reporter window
@@ -460,8 +461,44 @@ class ReportWindow(QWidget):
         self.rightClickMenu.show()
 
 
+class CheckLists(QWidget)
+    ##TODO Change this layout to be 2 list boxes that you can move items over to valid or not as I can se this list becoming stupidly long.
+    def __init__(self, parent = None, label = "", data = {}):
+        QWidget.__init__(self, parent)
+        self.label = label
+        self.data = data
+        self.setWindowTitle(self.label)
+        self.setObjectName(self.label)
+        self.mainLayout = QVBoxLayout(self)
+
+        self.groupBox = QGroupBox(self)
+        self.groupBox.setTitle(self.label)
+        self.groupBoxLayout = QHBoxLayout(self.groupBox)
+
+        self.baseList = QListWidget(self)
+        self.activeList = QListWidget(self)
+
+        self.buttonLayout = QVBoxLayout(self)
+        self.moveToActiveButton = QPushButton(QIcon('{}\\.png'.format(CONST.ICONPATH)))
+        self.moveToBaseButton = QPushButton(QIcon('{}\\.png'.format(CONST.ICONPATH)))
+
+        self.groupBoxLayout.addWidget(self.baseList)
+        self.groupBoxLayout.addLayout(self.buttonLayout)
+        self.groupBoxLayout.addWidget(self.activeList)
+
+        self.mainLayout.addWidget(self.groupBox)
+
+    def _addData(self):
+        pass
+
+    def _addToActiveList(self):
+        pass
+
+    def _removeFromActiveList(self):
+        pass
 
 class ConfigUI(QWidget):
+    ##TODO Change this layout to be 2 list boxes that you can move items over to valid or not as I can se this list becoming stupidly long.
     def __init__(self, parent = None, label = "Config"):
         QWidget.__init__(self, parent)
         self.label = label
@@ -478,6 +515,7 @@ class ConfigUI(QWidget):
         Setup the mainLayout for the UI
         :return:
         """
+
         self.checksLayout = QVBoxLayout(self)
         checks = self.config['activechecks']
         for checkDept, checkList in checks.items():
@@ -485,32 +523,22 @@ class ConfigUI(QWidget):
             self.deptGrpBox = QGroupBox(self)
             self.deptGrpBox.setObjectName('{}GroupBox'.format(checkDept))
             self.deptGrpBox.setTitle(checkDept)
-            self.deptGrpBoxLayout = QGridLayout(self.deptGrpBox)
 
+            self.deptGrpBoxLayout = QGridLayout(self.deptGrpBox)
             self.deptGrpBox.setContextMenuPolicy(Qt.CustomContextMenu)
             self.deptGrpBox.customContextMenuRequested.connect(self.showRightClickMenu)
 
-            r = 0
-            c = 0
-            for x in range(len(self.config["checkList"])):
-            #for eachCheck in self.config["checkList"]:
-                eachCheck = self.config["checkList"][x]
-                self.addRadioBox = QRadioButton(eachCheck)
-                self.addRadioBox.setObjectName(eachCheck)
-                self.addRadioBox.setAutoExclusive(False)
-                for eachItem in checkList:
-                    if eachItem == eachCheck:
-                        self.addRadioBox.setChecked(True)
+            self.validChecks = QListWidget(self)
+            self.activeChecks = QListWidget(self)
 
-                self.deptGrpBoxLayout.addWidget(self.addRadioBox, r, c)
-                self.configData[checkDept][eachCheck] = self.addRadioBox
+            for eachCheck in self.config["checkList"]:
+                self.validChecks.addItem(eachCheck)
 
-                if c < 5:
-                    c = c + 1
-                    r = r
-                else:
-                    c = 0
-                    r = r + 1
+            for eachItem in checkList:
+                self.activeChecks.addItem(eachItem)
+
+            self.deptGrpBoxLayout.addWidget(self.validChecks)
+            self.deptGrpBoxLayout.addWidget(self.activeChecks)
 
             ## Now add the groupbox to the layout
             self.checksLayout.addWidget(self.deptGrpBox)
@@ -578,6 +606,8 @@ class ConfigUI(QWidget):
             if checkDept == deptName:
                 for checkName, radioBox in radioBoxes.items():
                     radioBox.setChecked(val)
+
+
 
 ################### FUNCS
 def loadConfig():
