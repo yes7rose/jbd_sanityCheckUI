@@ -274,10 +274,18 @@ class ReportWindow(QWidget):
         self.mainLayout.addWidget(self.groupBox)
 
     def _initRCMenu(self):
+        """
+        THis is a customizable area that relates to the config.
+        In the config.yaml file there is a rightClickCheckSubMenus entry you can edit
+        Each report window for a sanity check can have a special right click added this way for cleaning the errors found.
+        Each of the cleanups are methods in this class for now.
+        :return:
+        """
         self.rightClickMenu = QMenu()
         self.rightClickMenu.setObjectName('Actions')
         self.rightClickMenu.setWindowTitle('Actions')
         ################################################################################################################
+        # START EDITING HERE
         ################################################################################################################
         ## ADD CUSTOM ACTIONS FOR CUSTOM SANITY CHECKS HERE
         ## Define the custom actions now that the config will query each check to show or hide based on the
@@ -315,6 +323,7 @@ class ReportWindow(QWidget):
         self.actions = [self.geoSuffixAction, self.grpSuffixAction, self.crvSuffixAction, self.renameAction,
                         self.removeShapesAction, self.deleteCHAction]
         ################################################################################################################
+        # STOP EDITING HERE
         ################################################################################################################
         ## DEFAULT Right click menu actions
         self.deleteAction = QAction('Delete', self)
@@ -447,7 +456,6 @@ class ReportWindow(QWidget):
             logger.info('Please type a name?!')
 
     def removeFromList(self, searchString = ''):
-        ##TODO this isn't working as intended the resulting addData is all over the place :(
         count = self.reportTree.count()
         treeWidgets = []
         for x in range(count):
@@ -490,9 +498,11 @@ class ConfigCheckLists(QWidget):
         ## The base list widgets, using these over M/View for speed of setup.
         self.allChecks_ListWidget = QListWidget(self)
         self.allChecks_ListWidget.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.allChecks_ListWidget.itemEntered.connect(partial(self._disableMoveToBaseButtons))
 
         self.activeChecks_ListWidget = QListWidget(self)
         self.activeChecks_ListWidget.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.activeChecks_ListWidget.itemEntered.connect(partial(self._disableMoveToActiveButtons))
 
         ################################################################################################################
         ## Button Layout
@@ -504,10 +514,12 @@ class ConfigCheckLists(QWidget):
         self.moveToBaseButton = QPushButton(QIcon('{}\\iconmonstr-arrow-52-240PntLeft.png'.format(CONST.ICONPATH)), '', self)
         self.moveToBaseButton.clicked.connect(partial(self._removeFromActiveList))
         self.moveToBaseButton.setToolTip('Remove from active sanity checks for this dept')
+        self.moveToBaseButton.setEnabled(False)
 
         self.addAllToBaseButton = QPushButton(QIcon('{}\\iconmonstr-arrowPntLeft-32-240.png'.format(CONST.ICONPATH)), '', self)
         self.addAllToBaseButton.clicked.connect(partial(self._removeFromActiveList, False))
         self.addAllToBaseButton.setToolTip('Remove ALL from active sanity checks for this dept')
+        self.addAllToBaseButton.setEnabled(False)
 
         self.addAllToActiveButton = QPushButton(QIcon('{}\\iconmonstr-arrowPntRight-32-240.png'.format(CONST.ICONPATH)), '', self)
         self.addAllToActiveButton.clicked.connect(partial(self._addToActiveList, False))
@@ -580,7 +592,19 @@ class ConfigCheckLists(QWidget):
                     self.allChecks_List.extend([name])
         self._addData()
 
+    def _disableMoveToBaseButtons(self, sender):
+        self.moveToBaseButton.setEnabled(False)
+        self.addAllToBaseButton.setEnabled(False)
+        self.moveToActiveButton.setEnabled(True)
+        self.addAllToActiveButton.setEnabled(True)
+        self.activeChecks_ListWidget.setCurrentRow(-1)
 
+    def _disableMoveToActiveButtons(self, sender):
+        self.moveToActiveButton.setEnabled(False)
+        self.addAllToActiveButton.setEnabled(False)
+        self.moveToBaseButton.setEnabled(True)
+        self.addAllToBaseButton.setEnabled(True)
+        self.allChecks_ListWidget.setCurrentRow(-1)
 
 class ConfigUI(QWidget):
     def __init__(self, parent = None, label = "Config"):

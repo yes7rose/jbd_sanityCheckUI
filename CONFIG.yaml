@@ -1,17 +1,22 @@
 activechecks:
   anim: [DeadUtility, UtilityNames, grpSuffix, intermediateObject, nurbsCurve, pastedNodes,
     references, shapeNames, transformGeometry, unknown]
-  light: [DeadUtility, duplicateNames, geoSuffix]
+  light: [duplicateNames, endingWith##, transformGeometry, unknown]
+  mdl: [DeadUtility, endingWith##, geoSuffix, grpSuffix, intermediateObject, nurbsCurve,
+    pastedNodes, references, shapeNames, transformGeometry, unknown]
+  rig: [DeadUtility, nurbsCurve, pastedNodes, references, shapeNames, transformGeometry,
+    unknown, UtilityNames, animCurves, constructionHistory, duplicateNames, endingWith##,
+    geoSuffix, grpSuffix, intermediateObject]
   srf: [DeadUtility, duplicateNames, geoSuffix]
-  mdl: [DeadUtility, UtilityNames, animCurves, constructionHistory, duplicateNames,
-    endingWith##, geoSuffix, grpSuffix, intermediateObject, nurbsCurve, pastedNodes,
-    references, shapeNames, transformGeometry, unknown]
-  rig: [DeadUtility, UtilityNames, animCurves, constructionHistory, duplicateNames,
-    endingWith##, geoSuffix, grpSuffix, intermediateObject, nurbsCurve, pastedNodes,
-    references, shapeNames, transformGeometry, unknown]
 allChecks: [DeadUtility, UtilityNames, animCurves, constructionHistory, duplicateNames,
   endingWith##, geoSuffix, grpSuffix, intermediateObject, nurbsCurve, pastedNodes,
   references, shapeNames, transformGeometry, unknown]
+buttons:
+  anim: {icon: iconmonstr-direction-10-240, toolTip: Set checks for animation dept}
+  light: {icon: iconmonstr-light-bulb-16-240, toolTip: Set checks for lighting dept}
+  mdl: {icon: iconmonstr-cube-11-240, toolTip: Set checks for modeling dept}
+  rig: {icon: iconmonstr-magic-6-240, toolTip: Set checks for rig dept}
+  srf: {icon: iconmonstr-paint-bucket-12-240, toolTip: Set checks for surfacing dept}
 rightClickCheckSubMenus:
   DeadUtility: []
   UtilityNames: []
@@ -28,19 +33,3 @@ rightClickCheckSubMenus:
   shapeNames: []
   transformGeometry: []
   unknown: []
-buttons:
-    mdl:
-        icon: iconmonstr-cube-11-240
-        toolTip: Set checks for modeling dept
-    rig:
-        icon: iconmonstr-magic-6-240
-        toolTip: Set checks for rig dept
-    srf:
-        icon: iconmonstr-paint-bucket-12-240
-        toolTip: Set checks for surfacing dept
-    anim:
-        icon: iconmonstr-direction-10-240
-        toolTip: Set checks for animation dept
-    light:
-        icon: iconmonstr-light-bulb-16-240
-        toolTip: Set checks for lighting dept
