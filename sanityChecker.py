@@ -57,34 +57,16 @@ class SanityUI(QMainWindow):
         self.toolBar.setFloatable(False)
         self.toolBar.setMovable(False)
         self.toolBar.setAllowedAreas(Qt.TopToolBarArea)
-        self.mdlAction = QAction('mdl', self)
-        ic = QIcon("{}/iconmonstr-cube-11-240.png".format(CONST.ICONPATH))
-        self.mdlAction.setIcon(ic)
-        self.mdlAction.setToolTip('Set checks for modeling dept')
-        self.mdlAction.triggered.connect(partial(self._initCheckBoxes, stateCB = 'mdl'))
 
-        self.rigAction = QAction('rig', self)
-        ic = QIcon("{}/iconmonstr-magic-6-240.png".format(CONST.ICONPATH))
-        self.rigAction.setIcon(ic)
-        self.rigAction.setToolTip('Set checks for rig dept')
-        self.rigAction.triggered.connect(partial(self._initCheckBoxes, stateCB = 'rig'))
+        buttonConfig = self.config['buttons']
+        for buttonName, buttonDict in buttonConfig.items():
+            self.action = QAction(buttonName, self)
+            ic = QIcon("{}/{}.png".format(CONST.ICONPATH, buttonDict['icon']))
+            self.action.setIcon(ic)
+            self.action.setToolTip(buttonDict['toolTip'])
+            self.action.triggered.connect(partial(self._initCheckBoxes, stateCB = buttonName))
+            self.toolBar.addAction(self.action)
 
-        self.animAction = QAction('anim', self)
-        ic = QIcon("{}/iconmonstr-direction-10-240.png".format(CONST.ICONPATH))
-        self.animAction.setIcon(ic)
-        self.animAction.setToolTip('Set checks for anim dept')
-        self.animAction.triggered.connect(partial(self._initCheckBoxes, stateCB = 'anim'))
-
-        self.lightAction = QAction('light', self)
-        ic = QIcon("{}/iconmonstr-light-bulb-16-240.png".format(CONST.ICONPATH))
-        self.lightAction.setIcon(ic)
-        self.lightAction.setToolTip('Set checks for lighting dept')
-        self.lightAction.triggered.connect(partial(self._initCheckBoxes, stateCB = 'light'))
-
-        self.toolBar.addAction(self.mdlAction)
-        self.toolBar.addAction(self.rigAction)
-        self.toolBar.addAction(self.animAction)
-        self.toolBar.addAction(self.lightAction)
         self.toolBar.addSeparator()
 
         self.performChecks = QPushButton(QIcon("{}/iconmonstr-log-out-4-240.png".format(CONST.ICONPATH)), 'CHECK NOW')

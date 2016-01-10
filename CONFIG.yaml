@@ -2,6 +2,7 @@ activechecks:
   anim: [DeadUtility, UtilityNames, grpSuffix, intermediateObject, nurbsCurve, pastedNodes,
     references, shapeNames, transformGeometry, unknown]
   light: [DeadUtility, duplicateNames, geoSuffix]
+  srf: [DeadUtility, duplicateNames, geoSuffix]
   mdl: [DeadUtility, UtilityNames, animCurves, constructionHistory, duplicateNames,
     endingWith##, geoSuffix, grpSuffix, intermediateObject, nurbsCurve, pastedNodes,
     references, shapeNames, transformGeometry, unknown]
@@ -27,3 +28,19 @@ rightClickCheckSubMenus:
   shapeNames: []
   transformGeometry: []
   unknown: []
+buttons:
+    mdl:
+        icon: iconmonstr-cube-11-240
+        toolTip: Set checks for modeling dept
+    rig:
+        icon: iconmonstr-magic-6-240
+        toolTip: Set checks for rig dept
+    srf:
+        icon: iconmonstr-paint-bucket-12-240
+        toolTip: Set checks for surfacing dept
+    anim:
+        icon: iconmonstr-direction-10-240
+        toolTip: Set checks for animation dept
+    light:
+        icon: iconmonstr-light-bulb-16-240
+        toolTip: Set checks for lighting dept
