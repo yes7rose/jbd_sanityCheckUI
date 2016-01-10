@@ -265,10 +265,14 @@ def sanityCheck():
     ## unknown
     sanitydata['unknown'] = data["unknown"]
 
-    ## Base nurbs curves not ending in _crv or _ctrl
+    ## Base nurbs curves not ending in correct suffix
     sanitydata['nurbsCurve'] = checkNurbsCurves(data)
 
     ## Construction history on nurbs curvs and meshes
     sanitydata['constructionHistory'] = checkSConstructionHistory(data)
+
+    ## NonManifold
+    ## Reversed Normals
+    ##
     return sanitydata
 

@@ -3,19 +3,22 @@ Created by James Dunlop
 2016
 Dependencies yaml
 """
-import os, yaml, logging
+import os, yaml, logging, sys
 from functools import partial
 from PySide.QtCore import *
 from PySide.QtGui import *
 logger = logging.getLogger(__name__)
 import python.sanity_lib.sanity as sanity
 import python.sanity_lib.CONST as CONST
-import maya.cmds as cmds
+try:import maya.cmds as cmds
+except ImportError: pass
 reload(CONST)
-SEP = " |  | " ## Used in the listWidgets to make it easier to read the long names
 reload(sanity)
-## TODO add a feature to remove the 1 at the end of the badly numbered items
+
+SEP = " |  | " ## Used in the listWidgets to make it easier to read the long names
+## TODO add a cleanup into ReportWindow to remove the 1 at the end of the badly numbered items
 ## TODO Fix the bug in shape name checking that geo_Shape shows up and needs cleaning!
+## TODO add a cleanup for shape names
 
 
 
@@ -606,6 +609,8 @@ class ConfigCheckLists(QWidget):
         self.addAllToBaseButton.setEnabled(True)
         self.allChecks_ListWidget.setCurrentRow(-1)
 
+
+
 class ConfigUI(QWidget):
     def __init__(self, parent = None, label = "Config"):
         QWidget.__init__(self, parent)
@@ -689,19 +694,14 @@ def _dumpYAML(data):
     with open(filePath, 'w') as outfile:
         outfile.write(yaml.dump(data))
 
-# def widgets_at(pos):
-#     """Return ALL widgets at `pos`
-#     Arguments:
-#         pos (QPoint): Position at which to get widgets
-#     """
-#     widgets = []
-#     widget_at = qApp.widgetAt(pos)
-#     while widget_at:
-#         widgets.append(widget_at)
-#         # Make widget invisible to further enquiries
-#         widget_at.setAttribute(Qt.WA_TransparentForMouseEvents)
-#         widget_at = qApp.widgetAt(pos)
-#     # Restore attribute
-#     for widget in widgets:
-#         widget.setAttribute(Qt.WA_TransparentForMouseEvents, False)
-#     return widgets
+
+
+### This boilerplate code
+def main():
+    app = QApplication(sys.argv)
+    w = SanityUI()
+    w.show()
+    sys.exit(app.exec_())
+
+if __name__ == '__main__':
+    main()
