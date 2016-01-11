@@ -9,17 +9,46 @@ CONSTRAINTS = ('parentConstraint', 'pointConstraint', 'orientConstraint',
                'scaleConstraint', 'pointOnPolyConstraint', 'geometryConstraint',
                'normalConstraint', 'tangentConstraint', 'poleVectorConstraint',
                'aimConstraint')
-GROUP_SUFFIX = 'hrc'
-GEOMETRY_SUFFIX = 'geo'
-RIG_CTRL_SUFFIX = 'ctrl'
-BLENDSHAPE_SUFFIX = 'BLN'
-NURBSCRV_SUFFIX = 'crv'
-IMPORT_SUFFIX = 'importDELME'
-SHOTCAM_SUFFIX = 'shotCam'
+
+GROUP_SUFFIX = {
+                "master": ['hrc'],
+                "secondary": ['grp', 'srt', 'srtBuffer', 'input', 'output']
+                }
+GEOMETRY_SUFFIX = {
+                "master": ['geo'],
+                "secondary": ['bln']
+                }
+RIG_CTRL_SUFFIX = {
+                "master": ['ctrl'],
+                "secondary": ['ctl']
+                }
+BLENDSHAPE_SUFFIX = {
+                "master": ['BLN'],
+                "secondary": ['bln']
+                }
+NURBSCRV_SUFFIX = {
+                "master": ['crv'],
+                "secondary": ['curve', 'ctrl']
+                }
+IMPORT_SUFFIX = {
+                "master": ['importDELME'],
+                "secondary": ['imp']
+                }
+SHOTCAM_SUFFIX = {
+                "master": ['shotCam'],
+                "secondary": ['shcam']
+                }
+SHOTCAM_SUFFIX = {
+                "master": ['srt'],
+                "secondary": ['SRT']
+                }
+SRTBUFFER_SUFFIX = {
+                "master": ['srtBuffer'],
+                "secondary": ['srtBuffer']
+                }
+
 L_PREFIX = 'L'
 R_PREFIX = 'R'
-SRT_SUFFIX = 'srt'
-SRTBUFFER_SUFFIX = 'srtBuffer'
 
 basePath = os.path.realpath(__file__)
 basePath = basePath.split(os.path.sep)

@@ -1,13 +1,11 @@
 activechecks:
-  anim: [DeadUtility, UtilityNames, grpSuffix, intermediateObject, nurbsCurve, pastedNodes,
-    references, shapeNames, transformGeometry, unknown]
-  light: [duplicateNames, endingWith##, transformGeometry, unknown]
-  mdl: [DeadUtility, endingWith##, geoSuffix, grpSuffix, intermediateObject, nurbsCurve,
-    pastedNodes, references, shapeNames, transformGeometry, unknown]
+  anim: []
+  light: []
+  mdl: []
   rig: [DeadUtility, nurbsCurve, pastedNodes, references, shapeNames, transformGeometry,
     unknown, UtilityNames, animCurves, constructionHistory, duplicateNames, endingWith##,
     geoSuffix, grpSuffix, intermediateObject]
-  srf: [DeadUtility, duplicateNames, geoSuffix]
+  srf: []
 allChecks: [DeadUtility, UtilityNames, animCurves, constructionHistory, duplicateNames,
   endingWith##, geoSuffix, grpSuffix, intermediateObject, nurbsCurve, pastedNodes,
   references, shapeNames, transformGeometry, unknown]
@@ -30,6 +28,6 @@ rightClickCheckSubMenus:
   nurbsCurve: [rename, AddCrvSuffix]
   pastedNodes: []
   references: []
-  shapeNames: []
+  shapeNames: [renameShape]
   transformGeometry: []
   unknown: []

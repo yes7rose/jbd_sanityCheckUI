@@ -14,11 +14,7 @@ try:import maya.cmds as cmds
 except ImportError: pass
 reload(CONST)
 reload(sanity)
-
 SEP = " |  | " ## Used in the listWidgets to make it easier to read the long names
-## TODO add a cleanup into ReportWindow to remove the 1 at the end of the badly numbered items
-## TODO Fix the bug in shape name checking that geo_Shape shows up and needs cleaning!
-## TODO add a cleanup for shape names
 
 
 
@@ -293,38 +289,51 @@ class ReportWindow(QWidget):
         ## ADD CUSTOM ACTIONS FOR CUSTOM SANITY CHECKS HERE
         ## Define the custom actions now that the config will query each check to show or hide based on the
         ## type of check done
-        self.geoSuffixAction = QAction('Add \"_{}\" suffix'.format(CONST.GEOMETRY_SUFFIX), self)
+        ## Add GEO Suffix
+        self.geoSuffixAction = QAction('Add \"_{}\" suffix'.format(CONST.GEOMETRY_SUFFIX['master'][0]), self)
         self.geoSuffixAction.setObjectName('AddGeoSuffix')
         self.geoSuffixAction.setIcon(QIcon("{}/iconmonstr-plus-1-240.png".format(CONST.ICONPATH)))
-        self.geoSuffixAction.triggered.connect(partial(self.addSuffix, suffix = CONST.GEOMETRY_SUFFIX))
+        self.geoSuffixAction.triggered.connect(partial(self.addSuffix, suffix = CONST.GEOMETRY_SUFFIX['master'][0]))
 
-        self.grpSuffixAction = QAction('Add \"_{}\" suffix'.format(CONST.GROUP_SUFFIX), self)
+        ## Add GRP Suffix
+        self.grpSuffixAction = QAction('Add \"_{}\" suffix'.format(CONST.GROUP_SUFFIX['master'][0]), self)
         self.grpSuffixAction.setObjectName('AddGrpSuffix')
         self.grpSuffixAction.setIcon(QIcon("{}/iconmonstr-plus-1-240.png".format(CONST.ICONPATH)))
-        self.grpSuffixAction.triggered.connect(partial(self.addSuffix, suffix = CONST.GROUP_SUFFIX))
+        self.grpSuffixAction.triggered.connect(partial(self.addSuffix, suffix = CONST.GROUP_SUFFIX['master'][0]))
 
-        self.crvSuffixAction = QAction('Add \"_{}\" suffix'.format(CONST.NURBSCRV_SUFFIX), self)
+        ## Add NURBS Suffix
+        self.crvSuffixAction = QAction('Add \"_{}\" suffix'.format(CONST.NURBSCRV_SUFFIX['master'][0]), self)
         self.crvSuffixAction.setObjectName('AddCrvSuffix')
         self.crvSuffixAction.setIcon(QIcon("{}/iconmonstr-plus-1-240.png".format(CONST.ICONPATH)))
-        self.crvSuffixAction.triggered.connect(partial(self.addSuffix, suffix = CONST.NURBSCRV_SUFFIX))
+        self.crvSuffixAction.triggered.connect(partial(self.addSuffix, suffix = CONST.NURBSCRV_SUFFIX['master'][0]))
 
+        ## Renamer
         self.renameAction = QAction('Rename', self)
         self.renameAction.setObjectName('rename')
         self.renameAction.setIcon(QIcon("{}/iconmonstr-tumblr-4-240.png".format(CONST.ICONPATH)))
         self.renameAction.triggered.connect(partial(self.renamePopUpUI))
 
+        ## Fix ShapeName
+        self.fixShapeNameAction = QAction('Fix Shape Name', self)
+        self.fixShapeNameAction.setObjectName('renameShape')
+        self.fixShapeNameAction.setIcon(QIcon("{}/iconmonstr-tumblr-4-240.png".format(CONST.ICONPATH)))
+        self.fixShapeNameAction.triggered.connect(partial(self.fixShapeName))
+
+        ## Delete Construction History
         self.deleteCHAction = QAction('Delete ConsHist', self)
         self.deleteCHAction.setObjectName('constructionHistory')
         self.deleteCHAction.setIcon(QIcon("{}/iconmonstr-trash-can-5-240.png".format(CONST.ICONPATH)))
         self.deleteCHAction.triggered.connect(partial(self.processItems, case = 'deleteCH'))
 
+        ## Remove shapes from list
         self.removeShapesAction = QAction('Remove Shapes from List', self)
         self.removeShapesAction.setObjectName('removeShapes')
         self.removeShapesAction.setIcon(QIcon("{}/iconmonstr-eye-3-icon-256.png".format(CONST.ICONPATH)))
-        self.removeShapesAction.triggered.connect(partial(self.removeFromList, '{}Shape'.format(CONST.GEOMETRY_SUFFIX)))
+        self.removeShapesAction.triggered.connect(partial(self.removeFromList, CONST.GEOMETRY_SUFFIX['master'] + CONST.GEOMETRY_SUFFIX['secondary']))
 
         self.actions = [self.geoSuffixAction, self.grpSuffixAction, self.crvSuffixAction, self.renameAction,
-                        self.removeShapesAction, self.deleteCHAction]
+                        self.removeShapesAction, self.deleteCHAction, self.fixShapeNameAction]
+
         ################################################################################################################
         # STOP EDITING HERE
         ################################################################################################################
@@ -402,6 +411,13 @@ class ReportWindow(QWidget):
         cmds.undoInfo(closeChunk = True)
         self.parent._performChecks()
 
+    def fixShapeName(self):
+        count = self.reportTree.count()
+        for x in range(count):
+            item = self.reportTree.item(x).text()
+            getParent = cmds.listRelatives(item, p = True, f = True)
+            cmds.rename(item, "{}Shape".format(getParent[0].split("|")[-1]))
+
     def renamePopUpUI(self):
         self.renameWidget = QWidget(None)
         self.renameWidget.setObjectName('RenameWindow')
@@ -458,13 +474,15 @@ class ReportWindow(QWidget):
         else:
             logger.info('Please type a name?!')
 
-    def removeFromList(self, searchString = ''):
+    def removeFromList(self, suffixes = []):
         count = self.reportTree.count()
         treeWidgets = []
         for x in range(count):
-            if searchString not in self.reportTree.item(x).text() and self.reportTree.item(x).text() != "-----":
-                if self.reportTree.item(x).text().replace(SEP, "|") not in treeWidgets:
-                    treeWidgets.extend([self.reportTree.item(x).text().replace(SEP, "|")])
+            for eachSuffix in suffixes:
+                name = '{}Shape'.format(eachSuffix)
+                if name not in self.reportTree.item(x).text() and self.reportTree.item(x).text() != "-----":
+                    if self.reportTree.item(x).text().replace(SEP, "|") not in treeWidgets:
+                        treeWidgets.extend([self.reportTree.item(x).text().replace(SEP, "|")])
         self.reportTree.clear()
         self.addData(treeWidgets)
 

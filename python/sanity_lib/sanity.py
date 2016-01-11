@@ -79,7 +79,8 @@ def checkGeoSuffix(data):
     errors = []
     for eachMsh in data['mesh']:
         parent = cmds.listRelatives(eachMsh, parent = True, f = True)[0]
-        if not parent.endswith(CONST.GEOMETRY_SUFFIX) and not parent.endswith(CONST.BLENDSHAPE_SUFFIX):
+        suffixes = CONST.GEOMETRY_SUFFIX['master'] + CONST.GEOMETRY_SUFFIX['secondary']
+        if not validSuffix(suffixes, eachMsh):
             if parent not in errors:
                 errors.extend([parent])
     return errors
@@ -92,23 +93,20 @@ def checkGrpSuffix(data):
     """
     errors = []
     ignoreDefaultTransforms = ["|persp", "|top", "|front", "|side"]
+    suffixes = CONST.GROUP_SUFFIX['master'] + CONST.GROUP_SUFFIX['secondary']
     for eachXF in data['transform']:
         if eachXF not in ignoreDefaultTransforms:
             getChildren = cmds.listRelatives(eachXF, children = True, f = True)
             if not getChildren:
-                if not eachXF.endswith(CONST.GROUP_SUFFIX):
-                    if not eachXF.endswith(CONST.SRT_SUFFIX):
-                        if not eachXF.endswith(CONST.SRTBUFFER_SUFFIX):
-                            if eachXF not in errors:
-                                errors.extend([eachXF])
+                if not validSuffix(suffixes, eachXF):
+                    if eachXF not in errors:
+                        errors.extend([eachXF])
             else:
                 lookforshape = [shp for shp in getChildren if cmds.nodeType(shp) == 'mesh' or cmds.nodeType(shp) == 'nurbsCurve']
                 if not lookforshape:
-                    if not eachXF.endswith(CONST.GROUP_SUFFIX):
-                        if not eachXF.endswith(CONST.SRT_SUFFIX):
-                            if not eachXF.endswith(CONST.SRTBUFFER_SUFFIX):
-                                if eachXF not in errors:
-                                    errors.extend([eachXF])
+                    if not validSuffix(suffixes, eachXF):
+                        if eachXF not in errors:
+                            errors.extend([eachXF])
     return errors
 
 def checkShapeNames(data):
@@ -130,6 +128,7 @@ def checkShapeNames(data):
         if "{}Shape".format(parentName.split("|")[-1]) != eachShape.split("|")[-1]:
             if not eachShape in errors:
                 errors.extend([eachShape])
+
     ## NURBS CURVE SHAPES
     for eachShape in data['nurbsCurve']:
         ## Should end in shape
@@ -193,13 +192,21 @@ def checkUtilityNames():
     types = loadNodeData()['nodes']
     errors = []
     for eachNType in types['matrix']:
-        for eachType, searchString in eachNType.items():
+        for eachType, validSuffixes in eachNType.items():
             getAll = cmds.ls(type = eachType)
             if getAll:
                 for eachNode in getAll:
-                    if searchString not in eachNode:
+                    if not validSuffix(validSuffixes, eachNode):
                         errors.extend([eachNode])
     return errors
+
+def validSuffix(suffixList, nodeName):
+    suffixFound = False
+    for eachSuffix in suffixList:
+        if nodeName.endswith(eachSuffix):
+            suffixFound = True
+
+    return suffixFound
 
 def checkNurbsCurves(data):
     """
@@ -208,12 +215,12 @@ def checkNurbsCurves(data):
     :return:
     """
     errors = []
+    suffixes = CONST.NURBSCRV_SUFFIX['master'] + CONST.NURBSCRV_SUFFIX['secondary']
     for eachCrv in data['nurbsCurve']:
         p = cmds.listRelatives(eachCrv, p = True, f = True)[0]
-        if not p.endswith(CONST.RIG_CTRL_SUFFIX):
-            if not p.endswith(CONST.NURBSCRV_SUFFIX):
-                if not p in errors:
-                    errors.extend([p])
+        if not validSuffix(suffixes, eachCrv):
+            if not p in errors:
+                errors.extend([p])
     return errors
 
 def sanityCheck():
@@ -272,7 +279,9 @@ def sanityCheck():
     sanitydata['constructionHistory'] = checkSConstructionHistory(data)
 
     ## NonManifold
+
     ## Reversed Normals
-    ##
+
+
     return sanitydata
 
