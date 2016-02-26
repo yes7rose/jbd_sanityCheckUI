@@ -8,14 +8,21 @@ from functools import partial
 from PySide.QtCore import *
 from PySide.QtGui import *
 logger = logging.getLogger(__name__)
-import python.sanity_lib.sanity as sanity
-import python.sanity_lib.CONST as CONST
-try:import maya.cmds as cmds
+
+try:
+    import maya.cmds as cmds
+    import python.sanity_lib.sanity as sanity
+    import python.sanity_lib.CONST as CONST
+    import python.sanity_lib.reportWindow as reportWindow
+    from python.sanity_lib.reportWindow import ReportWindow
 except ImportError: pass
 reload(CONST)
 reload(sanity)
+reload(reportWindow)
 SEP = " |  | " ## Used in the listWidgets to make it easier to read the long names
-
+## TODO add a cleanup into ReportWindow to remove the 1 at the end of the badly numbered items
+## TODO Fix the bug in shape name checking that geo_Shape shows up and needs cleaning!
+## TODO add a cleanup for shape names
 
 
 class SanityUI(QMainWindow):
@@ -46,10 +53,6 @@ class SanityUI(QMainWindow):
         self.setDockNestingEnabled(False)
         self.setTabPosition(Qt.LeftDockWidgetArea, QTabWidget.North)
         self.resize(1200, 600)
-
-        # for eachChild in self.children():
-        #     if type(eachChild) == QTabBar:
-        #         eachChild.currentChanged.connect(self._tabChange)
 
     def _initToolBar(self):
         self.toolBar = QToolBar(self)
@@ -210,7 +213,7 @@ class SanityUI(QMainWindow):
                     if data[eachRB.objectName()]:       ## We have valid failed data to process
                         self.failed = True
                         self.failedList.setEnabled(True)
-                        self.reportQL = ReportWindow(self, eachRB.objectName())
+                        self.reportQL = MyReportWindow(self, str(eachRB.objectName()))
                         self.reportQL.addData(data[eachRB.objectName()])
                         index = self.tabWidget.addWidget(self.reportQL)
                         self.failedList.addItem(eachRB.objectName())
@@ -236,187 +239,117 @@ class SanityUI(QMainWindow):
         self.checksDock.setFixedWidth(300)
 
 
-
-class ReportWindow(QWidget):
+class MyReportWindow(ReportWindow):
     def __init__(self, parent = None, label = {}):
-        QWidget.__init__(self, parent)
-        self.parent = parent
-        self.label = label
-        self.setWindowTitle(self.label)
-        self.setObjectName(self.label)
-        self.mainLayout = QVBoxLayout(self)
         self.config = loadConfig()
-        self.data = {}
-        self.__initMainLayout()
-        self.setFocus()
-
-    def __initMainLayout(self):
-        """
-        Setup the mainLayout for the reporter window
-        :return:
-        """
-        self.groupBox = QGroupBox(self)
-        self.groupBox.setTitle('{}:'.format(self.label))
-        self.groupBox.setStyleSheet("QGroupBox{border-radius: 15px; border: 2px solid gray; font-size: 18px; font-weight: bold;margin-top: 5ex;} QGroupBox::title{padding: -50 1 1 1;}")
-        self.groupBoxLayout = QVBoxLayout(self.groupBox)
-
-        self.reportTree = QListWidget(self)
-        self.reportTree.setSelectionMode(QAbstractItemView.ExtendedSelection)
-
-        self._initRCMenu()
-        ## Set the rick click menus now
-        self.reportTree.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.reportTree.customContextMenuRequested.connect(self.showRightClickMenu)
-        self.reportTree.itemClicked.connect(partial(self.processItems, case = 'select'))
-
-        self.groupBoxLayout.addWidget(self.reportTree)
-        self.mainLayout.addWidget(self.groupBox)
+        self.data = []
+        self.label = label
+        ReportWindow.__init__(self, parent, label)
 
     def _initRCMenu(self):
-        """
-        THis is a customizable area that relates to the config.
-        In the config.yaml file there is a rightClickCheckSubMenus entry you can edit
-        Each report window for a sanity check can have a special right click added this way for cleaning the errors found.
-        Each of the cleanups are methods in this class for now.
-        :return:
-        """
-        self.rightClickMenu = QMenu()
-        self.rightClickMenu.setObjectName('Actions')
-        self.rightClickMenu.setWindowTitle('Actions')
         ################################################################################################################
         # START EDITING HERE
         ################################################################################################################
         ## ADD CUSTOM ACTIONS FOR CUSTOM SANITY CHECKS HERE
         ## Define the custom actions now that the config will query each check to show or hide based on the
         ## type of check done
-        ## Add GEO Suffix
-        self.geoSuffixAction = QAction('Add \"_{}\" suffix'.format(CONST.GEOMETRY_SUFFIX['master'][0]), self)
-        self.geoSuffixAction.setObjectName('AddGeoSuffix')
-        self.geoSuffixAction.setIcon(QIcon("{}/iconmonstr-plus-1-240.png".format(CONST.ICONPATH)))
-        self.geoSuffixAction.triggered.connect(partial(self.addSuffix, suffix = CONST.GEOMETRY_SUFFIX['master'][0]))
+        nodes = sanity.loadNodeData()
 
-        ## Add GRP Suffix
-        self.grpSuffixAction = QAction('Add \"_{}\" suffix'.format(CONST.GROUP_SUFFIX['master'][0]), self)
-        self.grpSuffixAction.setObjectName('AddGrpSuffix')
-        self.grpSuffixAction.setIcon(QIcon("{}/iconmonstr-plus-1-240.png".format(CONST.ICONPATH)))
-        self.grpSuffixAction.triggered.connect(partial(self.addSuffix, suffix = CONST.GROUP_SUFFIX['master'][0]))
+        suffixButtons = {
+                        "AddGeoSuffix": {"suffix": CONST.GEOMETRY_SUFFIX['master'],
+                                         "iconName": "iconmonstr-plus-1-240"},
+                        "AddGrpSuffix": {"suffix": CONST.GROUP_SUFFIX['master'],
+                                         "iconName": "iconmonstr-plus-1-240"},
+                        "AddCrvSuffix": {"suffix": CONST.NURBSCRV_SUFFIX['master'],
+                                         "iconName": "iconmonstr-plus-1-240"},
+                        "AddRigCtrlSuffix": {"suffix": CONST.RIG_CTRL_SUFFIX['master'],
+                                         "iconName": "iconmonstr-plus-1-240"},
+                        "AddJointSuffix": {"suffix": CONST.JOINT_SUFFIX['master'],
+                                         "iconName": "iconmonstr-plus-1-240"},
+                         }
 
-        ## Add NURBS Suffix
-        self.crvSuffixAction = QAction('Add \"_{}\" suffix'.format(CONST.NURBSCRV_SUFFIX['master'][0]), self)
-        self.crvSuffixAction.setObjectName('AddCrvSuffix')
-        self.crvSuffixAction.setIcon(QIcon("{}/iconmonstr-plus-1-240.png".format(CONST.ICONPATH)))
-        self.crvSuffixAction.triggered.connect(partial(self.addSuffix, suffix = CONST.NURBSCRV_SUFFIX['master'][0]))
+        ## Fetch a list of valid node suffixes for adding to the UI
+        nodeSuffixes = []
+        for nType, data in nodes['nodes'].items():
+            for eachN, nSuffixes in data.items():
+                for eachSfx in nSuffixes:
+                    nodeSuffixes.extend([eachSfx])
+        for eachSFX in list(set(nodeSuffixes)):
+            suffixButtons[eachSFX] = {"suffix": eachSFX,
+                                      "iconName": 'iconmonstr-plus-1-240'}
+        ## Now add all the available suffixes for renaming
+        self.actions = []
+        for suffixName, sfxdata in suffixButtons.items():
+            self.action = QAction('Add \"_{}\" suffix'.format(sfxdata['suffix']), self)
+            self.action.setObjectName(suffixName)
+            self.action.setIcon(QIcon("{}/{}.png".format(CONST.ICONPATH, sfxdata['iconName'])))
+            self.action.triggered.connect(partial(self.addSuffix, suffix = sfxdata['suffix']))
+            self.actions.extend([self.action])
 
         ## Renamer
         self.renameAction = QAction('Rename', self)
         self.renameAction.setObjectName('rename')
         self.renameAction.setIcon(QIcon("{}/iconmonstr-tumblr-4-240.png".format(CONST.ICONPATH)))
         self.renameAction.triggered.connect(partial(self.renamePopUpUI))
+        self.actions.extend([self.renameAction])
 
         ## Fix ShapeName
         self.fixShapeNameAction = QAction('Fix Shape Name', self)
         self.fixShapeNameAction.setObjectName('renameShape')
         self.fixShapeNameAction.setIcon(QIcon("{}/iconmonstr-tumblr-4-240.png".format(CONST.ICONPATH)))
         self.fixShapeNameAction.triggered.connect(partial(self.fixShapeName))
+        self.actions.extend([self.fixShapeNameAction])
 
         ## Delete Construction History
         self.deleteCHAction = QAction('Delete ConsHist', self)
         self.deleteCHAction.setObjectName('constructionHistory')
         self.deleteCHAction.setIcon(QIcon("{}/iconmonstr-trash-can-5-240.png".format(CONST.ICONPATH)))
         self.deleteCHAction.triggered.connect(partial(self.processItems, case = 'deleteCH'))
+        self.actions.extend([self.deleteCHAction])
+
+        ## Remove Last Char from name
+        self.remLstCharAction = QAction('Remove Last Char', self)
+        self.remLstCharAction.setObjectName('removeLastCharacter')
+        self.remLstCharAction.setIcon(QIcon("{}/iconmonstr-trash-can-5-240.png".format(CONST.ICONPATH)))
+        self.remLstCharAction.triggered.connect(partial(self.removeLastCharFromName))
+        self.actions.extend([self.remLstCharAction])
 
         ## Remove shapes from list
         self.removeShapesAction = QAction('Remove Shapes from List', self)
         self.removeShapesAction.setObjectName('removeShapes')
         self.removeShapesAction.setIcon(QIcon("{}/iconmonstr-eye-3-icon-256.png".format(CONST.ICONPATH)))
-        self.removeShapesAction.triggered.connect(partial(self.removeFromList, CONST.GEOMETRY_SUFFIX['master'] + CONST.GEOMETRY_SUFFIX['secondary']))
-
-        self.actions = [self.geoSuffixAction, self.grpSuffixAction, self.crvSuffixAction, self.renameAction,
-                        self.removeShapesAction, self.deleteCHAction, self.fixShapeNameAction]
+        self.removeShapesAction.triggered.connect(partial(self.removeFromList, [CONST.GEOMETRY_SUFFIX['master']] + CONST.GEOMETRY_SUFFIX['secondary']))
+        self.actions.extend([self.removeShapesAction])
 
         ################################################################################################################
         # STOP EDITING HERE
         ################################################################################################################
-        ## DEFAULT Right click menu actions
-        self.deleteAction = QAction('Delete', self)
-        self.deleteAction.setIcon(QIcon("{}/iconmonstr-trash-can-5-240.png".format(CONST.ICONPATH)))
-        self.deleteAction.triggered.connect(partial(self.processItems, case = 'delete'))
-
+        ReportWindow._initRCMenu(self)
         ## Add the custom menu items to this report view
         actionsToDisplay = self.config["rightClickCheckSubMenus"][self.label]
         for eachAction in self.actions:
             if eachAction.objectName() in actionsToDisplay:
                 self.rightClickMenu.addAction(eachAction)
 
-        ## Add the defaults now
-        self.rightClickMenu.addSeparator()
-        self.rightClickMenu.addAction(self.deleteAction)
-
-    def addData(self, data = []):
-        """
-        Process the data into the report window
-        :param data: list of items to add to the listWidget
-        :type data: list
-        :return:
-        """
-        self.reportTree.clear()
-        stash = data
-        for eachD in data:
-            ## Add the item with a cleaner more readable spacer than maya's default |
-            self.reportTree.addItem(eachD.replace("|", SEP))
-
-            ## Now check to see if there are any more to report with the same name such as duplicate items
-            ## Basically easier to read in the treview
-            for eachStsh in stash:
-                if eachStsh != eachD:
-                    if eachStsh.split("|")[-1] == eachD.split("|")[-1]:
-                        self.reportTree.addItem(eachStsh.replace("|", SEP))
-                        data.remove(eachStsh)
-            ## Now add a little sep between em
-            self.reportTree.addItem("-----")
-
-    def processItems(self, sender = None, all = False, case = ''):
-        cmds.undoInfo(openChunk = True)
-        cmds.select(clear = True)
-        if not all:
-            for eachItem in self._getSelItems():
-                if case == 'select':
-                    cmds.select(eachItem.text().replace(SEP, "|"), add = True, ne = True)
-                elif case == 'delete':
-                    cmds.delete(eachItem.text().replace(SEP, "|"))
-                elif case == 'deleteCH':
-                    cmds.delete(eachItem.text().replace(SEP, "|"), ch = True)
-        else:
-            count = self.reportTree.count()
-            items = []
-            for x in range(count):
-                if "-----" not in self.reportTree.item(x).text():
-                    items.extend([self.reportTree.item(x).text()].replace(SEP, "|"))
-
-            if case == 'select':
-                cmds.select(items, r = True, ne = True)
-            elif case == 'delete':
-                cmds.delete(items)
-            elif case == 'deleteCH':
-                cmds.delete(items, ch = True)
-
-        cmds.undoInfo(closeChunk = True)
 
     def addSuffix(self, suffix = ''):
         cmds.undoInfo(openChunk = True)
         cmds.select(clear = True)
         for eachItem in self._getSelItems():
-            name = eachItem.text().replace(SEP, "|")
-            cmds.rename(name, "{0}_{1}".format(name.split("|")[-1], suffix))
+            itemName = eachItem.text().replace(SEP, "|")
+            if not cmds.objExists(itemName):
+                itemName = itemName.split('|')[-1] or None
+
+            if itemName:
+                cmds.rename(itemName, "{0}_{1}".format(itemName.split("|")[-1], suffix))
         cmds.undoInfo(closeChunk = True)
         self.parent._performChecks()
 
     def fixShapeName(self):
-        count = self.reportTree.count()
-        for x in range(count):
-            item = self.reportTree.item(x).text()
-            getParent = cmds.listRelatives(item, p = True, f = True)
-            cmds.rename(item, "{}Shape".format(getParent[0].split("|")[-1]))
+        for eacnN in self._getSelItems():
+            shpName = eacnN.text()
+            getParent = cmds.listRelatives(shpName, p = True, f = True)
+            cmds.rename(shpName, "{}Shape".format(getParent[0].split("|")[-1]))
 
     def renamePopUpUI(self):
         self.renameWidget = QWidget(None)
@@ -443,10 +376,6 @@ class ReportWindow(QWidget):
         self.renameWidget.show()
         self.renameWidget.resize(600, 100)
         self.renameWidget.setFocus()
-
-    def _getSelItems(self):
-        items = [item for item in self.reportTree.selectedItems() if item.text() != '-----']
-        return items
 
     def renameItems(self,):
         if not hasattr(self, 'renameWidget'):
@@ -486,9 +415,10 @@ class ReportWindow(QWidget):
         self.reportTree.clear()
         self.addData(treeWidgets)
 
-    def showRightClickMenu(self, position):
-        self.rightClickMenu.exec_(self.reportTree.viewport().mapToGlobal(position))
-        self.rightClickMenu.show()
+    def removeLastCharFromName(self):
+        for eacnN in self._getSelItems():
+            try:cmds.rename(eacnN.text().replace(SEP, "|"), eacnN.text().split(SEP)[-1][:-1])
+            except:pass
 
 
 
@@ -528,21 +458,21 @@ class ConfigCheckLists(QWidget):
         ################################################################################################################
         ## Button Layout
         self.buttonLayout = QVBoxLayout(self)
-        self.moveToActiveButton = QPushButton(QIcon('{}\\iconmonstr-arrow-52-240PntRight.png'.format(CONST.ICONPATH)), '', self)
+        self.moveToActiveButton = QPushButton(QIcon('{}/iconmonstr-arrow-52-240PntRight.png'.format(CONST.ICONPATH)), '', self)
         self.moveToActiveButton.clicked.connect(partial(self._addToActiveList))
         self.moveToActiveButton.setToolTip('Add to active sanity checks for this dept')
 
-        self.moveToBaseButton = QPushButton(QIcon('{}\\iconmonstr-arrow-52-240PntLeft.png'.format(CONST.ICONPATH)), '', self)
+        self.moveToBaseButton = QPushButton(QIcon('{}/iconmonstr-arrow-52-240PntLeft.png'.format(CONST.ICONPATH)), '', self)
         self.moveToBaseButton.clicked.connect(partial(self._removeFromActiveList))
         self.moveToBaseButton.setToolTip('Remove from active sanity checks for this dept')
         self.moveToBaseButton.setEnabled(False)
 
-        self.addAllToBaseButton = QPushButton(QIcon('{}\\iconmonstr-arrowPntLeft-32-240.png'.format(CONST.ICONPATH)), '', self)
+        self.addAllToBaseButton = QPushButton(QIcon('{}/iconmonstr-arrowPntLeft-32-240.png'.format(CONST.ICONPATH)), '', self)
         self.addAllToBaseButton.clicked.connect(partial(self._removeFromActiveList, False))
         self.addAllToBaseButton.setToolTip('Remove ALL from active sanity checks for this dept')
         self.addAllToBaseButton.setEnabled(False)
 
-        self.addAllToActiveButton = QPushButton(QIcon('{}\\iconmonstr-arrowPntRight-32-240.png'.format(CONST.ICONPATH)), '', self)
+        self.addAllToActiveButton = QPushButton(QIcon('{}/iconmonstr-arrowPntRight-32-240.png'.format(CONST.ICONPATH)), '', self)
         self.addAllToActiveButton.clicked.connect(partial(self._addToActiveList, False))
         self.addAllToActiveButton.setToolTip('Add ALL to active sanity checks for this dept')
 
@@ -711,7 +641,6 @@ def _dumpYAML(data):
     filePath = "%s\\CONFIG.yaml" % configPath
     with open(filePath, 'w') as outfile:
         outfile.write(yaml.dump(data))
-
 
 
 ### This boilerplate code

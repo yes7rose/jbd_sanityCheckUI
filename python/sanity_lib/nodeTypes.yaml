@@ -1,16 +1,97 @@
-## Some nodes and their respective suffixes in scene
 nodes:
   matrix:
-    - decomposeMatrix:
+    ##for uber rig fit
+    nurbsCurve:
+        - ctrl
+    ##for uber rig fit
+    transform:
+        - xf
+
+    decomposeMatrix:
         - mtx
-    - composeMatrix:
+        - cNode
+    AL_vecMath_matrix2Axis:
         - mtx
-    - unitConversion:
+        - cNode
+    AL_rig_component_footroll2Stg:
+        - mtx
+        - cNode
+    AL_vecMath_projectVectorOnPlane:
+        - mtx
+        - cNode
+    AL_simpleRoll:
+        - reparent
+        - cNode
+    AL_rig_reparentDual:
+        - reparent
+        - cNode
+    AL_rig_reparentMulti:
+        - reparent
+        - cNode
+    AL_rig_reparentSingle:
+        - reparent
+        - cNode
+    AL_vecMath_reparent:
+        - reparent
+        - cNode
+    AL_rig_component_vChainDistanceLimit:
+        - cNode
+    AL_rig_flow_is1or0_2out:
+        - cNode
+    AL_rig_hermite_array:
+        - cNode
+    AL_rig_hermite_transform:
+        - cNode
+    AL_rig_logical_and:
+        - cNode
+    AL_rig_math_vector_swivelMatrix:
+        - cNode
+    composeMatrix:
+        - mtx
+        - cNode
+    unitConversion:
         - UC
-    - multiplyDivide:
+        - cNode
+    multiplyDivide:
         - multiplyDivide
+        - cNode
+    addDoubleLinear:
+        - cNode
+        - ADLUTL
+    animBlendNodeAdditiveDA:
+        - cNode
+    animBlendNodeAdditiveRotation:
+        - cNode
+    clamp:
+        - cNode
+    condition:
+        - cNode
+        - cond
+        - COND
+        - CNDUTL
+        - CDNUTL
+    distanceBetween:
+        - cNode
+    multDoubleLinear:
+        - cNode
+    multMatrix:
+        - cNode
+    multiplyDivide:
+        - cNode
+        - multiplyDivide
+        - MDUTL
+        - MultDivUTL
+    plusMinusAverage:
+        - cNode
+        - MAUTL
+    pointMatrixMult:
+        - cNode
+    vectorProduct:
+        - cNode
+    animBlendNodeAdditive:
+        - cNode
   skin:
-    - skinCluster:
+    skinCluster:
         - skinCluster
-    - dagPose:
+    dagPose:
         - bindPose

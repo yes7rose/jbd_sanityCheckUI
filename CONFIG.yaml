@@ -2,7 +2,9 @@ activechecks:
   anim: []
   light: []
   mdl: []
-  rig: []
+  rig: [DeadUtility, UtilityNames, animCurves, constructionHistory, duplicateNames,
+    endingWith##, geoSuffix, grpSuffix, intermediateObject, nurbsCurve, pastedNodes,
+    references, shapeNames, transformGeometry, unknown]
   srf: []
 allChecks: [DeadUtility, UtilityNames, animCurves, constructionHistory, duplicateNames,
   endingWith##, geoSuffix, grpSuffix, intermediateObject, nurbsCurve, pastedNodes,
